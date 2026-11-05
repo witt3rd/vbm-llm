@@ -128,9 +128,10 @@ def ledger : List Obligation := [
   O "turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["openai-chat-turn:prefix-stable"]
     (.proved [``VbmLlm.OpenAI.render_prefix_stable, ``VbmLlm.pair_prefix_stable, ``VbmLlm.pairFrom_append_assistant]),
   -- the one-action context
-  O "context-the-prompt-is-the-prefix-the-state-and-the-observation-only" [] (.proved [``VbmLlm.messages_eq, ``VbmLlm.messages_length, ``VbmLlm.messages_inj, ``VbmLlm.request_messages, ``VbmLlm.messages_paired]),
+  O "context-the-prompt-is-the-prefix-the-state-the-observation-and-the-tail-only" [] (.proved [``VbmLlm.messages_eq, ``VbmLlm.messages_length, ``VbmLlm.messages_length_le, ``VbmLlm.messages_inj, ``VbmLlm.request_messages, ``VbmLlm.messages_paired]),
   O "context-the-system-prefix-bytes-are-stable-across-steps" [] (.proved [``VbmLlm.prefix_stable, ``VbmLlm.prefix_state_stable]),
-  O "context-the-prompt-size-is-the-sum-of-the-three-parts" [] (.proved [``VbmLlm.bytes_eq, ``VbmLlm.bytes_le]),
+  O "context-the-prompt-size-is-the-sum-of-the-four-parts" [] (.proved [``VbmLlm.bytes_eq, ``VbmLlm.bytes_le]),
+  O "context-the-tail-is-the-last-message-and-a-changed-tail-changes-only-it" [] (.proved [``VbmLlm.messages_tail, ``VbmLlm.history_stable, ``VbmLlm.history_prefix, ``VbmLlm.tail_changes_only_tail]),
   -- the Anthropic messages adapter: the reply (the request, the stream and the turn shape are open)
   O "anthropic-reply-decode-is-characterised" ["anthropic-messages:Message.id", "anthropic-messages:Message.model", "anthropic-messages:Message.content", "anthropic-messages:Message.stop_reason", "anthropic-messages:Message.stop_sequence", "anthropic-messages:Message.usage"]
     (.proved [``VbmLlm.Anthropic.decode_ok_iff, ``VbmLlm.Anthropic.decodeContent_ok_iff, ``VbmLlm.Anthropic.decodeBlocks_ok_iff, ``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.decode_no_content, ``VbmLlm.Anthropic.decode_content_not_array]),
