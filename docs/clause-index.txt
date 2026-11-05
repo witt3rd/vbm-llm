@@ -3,6 +3,7 @@
 # `openai-chat-status` is the class of the status of a failed call (VbmLlm.ErrorClass.ofStatus): the schema does not give it, the HTTP status codes' meaning is the standard's and the vendors' error pages, so every clause is `policy`.
 # `anthropic-messages` is the TypeScript type document pinned in docs/schemas/anthropic-messages.md.
 # `anthropic-messages-turn` is the pairing of tool results with tool calls in Anthropic's shape (docs/schemas/anthropic-messages.md, the turn section): the type document gives the block shapes, the sequence rule is stated by the vendor's tool-use guide in prose; every clause is `policy`, checked by recorded conversations.
+# `anthropic-messages-stream` is the fold of Anthropic's named events into one reply (docs/schemas/anthropic-messages.md, the stream section): the type document gives the events, the terminal and ordering rules are the vendor's streaming guide's, stated here as policy and checked by recorded streams.
 # `openrouter-chat` is the pair of documentation pages pinned in docs/schemas/openrouter-chat.md: OpenAI's profile plus four deviations, every clause `policy` (no machine-readable schema).
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
@@ -182,6 +183,29 @@ anthropic-messages-turn window policy the user text of a turn's window (text and
 anthropic-messages-turn unanswered-placeholder policy a call with no recorded result is shown with the consumer's placeholder text
 anthropic-messages-turn orphan-is-text policy a result with no turn open in front of it is shown as user text, never as a tool_result block
 anthropic-messages-turn prefix-stable policy extending a conversation by an assistant item leaves the messages already rendered as they were; assistant messages are never joined
+anthropic-messages RawMessageStreamEvent.type policy the data's type names the event; the stream's own event type, when named, must equal it; a type outside the eight events is refused
+anthropic-messages RawMessageStartEvent.message read the message: its id, model and the usage known at the start; its (empty) content is not read
+anthropic-messages RawContentBlockStartEvent.content_block read a block as the reply reads it (text, thinking, redacted_thinking, tool_use; another type is kept raw)
+anthropic-messages RawContentBlockStartEvent.index read natural; required, keys the block
+anthropic-messages RawContentBlockDeltaEvent.index read natural; required
+anthropic-messages RawContentBlockDeltaEvent.delta read the delta of the block
+anthropic-messages TextDelta.text read string; concatenated onto a text block
+anthropic-messages InputJSONDelta.partial_json read string, a piece of the call's input as JSON text; concatenated onto a tool_use block and parsed at message_stop
+anthropic-messages ThinkingDelta.thinking read string; concatenated onto a thinking block
+anthropic-messages SignatureDelta.signature read string; concatenated onto a thinking block's signature
+anthropic-messages RawContentBlockDelta.other policy a delta of another type (a citations delta) is read and kept out of the reply
+anthropic-messages RawContentBlockStopEvent.index read natural; required, the block must have started
+anthropic-messages RawMessageDeltaEvent.delta.stop_reason policy kept as the provider's text; the last non-null one wins
+anthropic-messages RawMessageDeltaEvent.delta.stop_sequence policy the last non-null one wins
+anthropic-messages MessageDeltaUsage.counts read naturals (output_tokens, input_tokens, the two cache counts); cumulative: each count is the last non-null one seen
+anthropic-messages RawMessageStopEvent.type policy the terminal event
+anthropic-messages ErrorEvent.error policy an error event stops the fold; its message is kept when it is a string
+anthropic-messages-stream message-stop-is-terminal policy the fold is complete only on message_stop as the last event, after message_start
+anthropic-messages-stream truncated-is-never-complete policy events that end with no message_stop are truncated, with the partial reply typed as partial
+anthropic-messages-stream error-event policy an error event stops the fold with its message and the partial reply
+anthropic-messages-stream order policy nothing but ping comes before message_start; a second message_start is refused
+anthropic-messages-stream chunk-boundaries policy deltas of a kind concatenate in order, so where a text or a call's input is split does not matter
+anthropic-messages-stream tool-input-from-pieces policy a call's input is the value its pieces parse to; none sent keeps the start's; pieces that do not parse refuse a complete reply and are kept as text in a partial one
 openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
 openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
 openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)

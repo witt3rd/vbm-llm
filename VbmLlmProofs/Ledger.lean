@@ -11,6 +11,7 @@ import VbmLlmProofs.Anthropic.Response
 import VbmLlmProofs.Anthropic.Request
 import VbmLlmProofs.Anthropic.RequestDecode
 import VbmLlmProofs.Anthropic.Turn
+import VbmLlmProofs.Anthropic.Event
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -167,6 +168,13 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.Anthropic.render_window_text_joins, ``VbmLlm.Anthropic.render_orphan, ``VbmLlm.Anthropic.render_unanswered, ``VbmLlm.Anthropic.render_answered]),
   O "anthropic-turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["anthropic-messages-turn:prefix-stable"]
     (.proved [``VbmLlm.Anthropic.render_prefix_stable, ``VbmLlm.Anthropic.renderSegs_append, ``VbmLlm.Anthropic.ledBy_pairFrom_none, ``VbmLlm.Anthropic.ledBy_pairFrom_some, ``VbmLlm.Anthropic.joinUser_append]),
+  -- the Anthropic stream: one event
+  O "anthropic-event-type-must-agree-and-only-the-conventions-events-are-read" ["anthropic-messages:RawMessageStreamEvent.type", "anthropic-messages:RawMessageStopEvent.type", "anthropic-messages:RawMessageStartEvent.message"]
+    (.proved [``VbmLlm.Anthropic.decodeEventData_not_object, ``VbmLlm.Anthropic.decodeEventData_type_mismatch, ``VbmLlm.Anthropic.decodeEventData_agrees, ``VbmLlm.Anthropic.decodeItemOf_unsupported,
+      ``VbmLlm.Anthropic.decodeItemOf_ping, ``VbmLlm.Anthropic.decodeItemOf_stop]),
+  O "anthropic-event-deltas-are-read-as-they-say" ["anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:RawContentBlockDelta.other", "anthropic-messages:RawContentBlockDeltaEvent.index",
+      "anthropic-messages:RawContentBlockDeltaEvent.delta", "anthropic-messages:RawContentBlockStartEvent.index", "anthropic-messages:RawContentBlockStartEvent.content_block", "anthropic-messages:RawContentBlockStopEvent.index"]
+    (.proved [``VbmLlm.Anthropic.decodeDelta_text, ``VbmLlm.Anthropic.decodeDelta_json, ``VbmLlm.Anthropic.decodeDelta_other, ``VbmLlm.Anthropic.reqIndex_missing]),
   O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold (the reply decoder, usage, stop reasons, the request codec with its round trip and the turn shape over `pair` have landed above)"),
   -- OpenRouter's variant of the chat profile
   O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
