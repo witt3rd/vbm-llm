@@ -1,6 +1,7 @@
 # The clause index (`openai-chat` is the OpenAPI document pinned in docs/schemas/openai-chat.md; `openai-chat-sse` is the stream framing, which that document does not specify: it is taken from the vendor's streaming description and OpenRouter's documented examples, always `policy`): the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
 # `openai-chat-turn` is the pairing of tool results with tool calls (docs/schemas/openai-chat.md, the turn section): the schema gives the message shapes, the sequence rule is stated by the vendor's function-calling guide in prose, so every clause is `policy`.
 # `openai-chat-status` is the class of the status of a failed call (VbmLlm.ErrorClass.ofStatus): the schema does not give it, the HTTP status codes' meaning is the standard's and the vendors' error pages, so every clause is `policy`.
+# `anthropic-messages` is the TypeScript type document pinned in docs/schemas/anthropic-messages.md.
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
 # The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
@@ -121,4 +122,31 @@ openai-chat-status timeout policy 408 is a timeout
 openai-chat-status rate-limit policy 429 is the rate limit
 openai-chat-status server policy a server error (500 and above) is an overloaded provider, except 525 and 526 (the TLS statuses), which are invalid
 openai-chat-status overflow policy a client error is an overflow only on the consumer's verdict on the message, and never when the status names a class of its own; any other client error is invalid
-
+anthropic-messages Message.id policy string; read when present, not required
+anthropic-messages Message.model policy string, an opaque name; read when present, not required
+anthropic-messages Message.content read array of content blocks; required, may be empty
+anthropic-messages Message.stop_reason policy kept as the provider's text (the seven listed words; any other word is kept and classed unknown); null or absent is none
+anthropic-messages Message.stop_sequence policy string or null; read when present
+anthropic-messages Message.usage read Usage; absent or null is no report
+anthropic-messages TextBlock.text read string; required
+anthropic-messages ToolUseBlock.id read string; required
+anthropic-messages ToolUseBlock.name read string; required
+anthropic-messages ToolUseBlock.input policy any JSON value that is not null, kept as the value (never printed to text or parsed further here); required
+anthropic-messages ThinkingBlock.thinking read string; required
+anthropic-messages ThinkingBlock.signature read string; required
+anthropic-messages RedactedThinkingBlock.data read string; required
+anthropic-messages ContentBlock.other policy a block whose type is not text, thinking, redacted_thinking or tool_use is kept raw, never dropped
+anthropic-messages Usage.input_tokens read natural; excludes the cache reads and writes
+anthropic-messages Usage.output_tokens read natural
+anthropic-messages Usage.cache_read_input_tokens read natural; a count of its own, not a part of input_tokens
+anthropic-messages Usage.cache_creation_input_tokens read natural; a count of its own, not a part of input_tokens
+anthropic-messages Message.container ignored
+anthropic-messages Message.diagnostics ignored
+anthropic-messages Message.role ignored the constant assistant
+anthropic-messages Message.stop_details ignored
+anthropic-messages Message.type ignored the constant message
+anthropic-messages TextBlock.citations ignored
+anthropic-messages ToolUseBlock.caller ignored
+anthropic-messages Usage.cache_creation ignored the breakdown by cache lifetime
+anthropic-messages Usage.service_tier ignored
+anthropic-messages Usage.server_tool_use ignored

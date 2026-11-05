@@ -1,0 +1,5 @@
+ok
+response id="msg_01" model="m" stop="end_turn" class=complete sequence=none
+  text "Hi, I'm Claude."
+usage input=2095 output=503 read=none write=none
+tokens uncached=2095 read=0 write=0 output=503 input_total=2095

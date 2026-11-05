@@ -6,6 +6,7 @@ import VbmLlmProofs.OpenAI.Stream
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
 import VbmLlmProofs.Error
+import VbmLlmProofs.Anthropic.Response
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -119,7 +120,17 @@ def ledger : List Obligation := [
   O "turn-text-is-never-dropped-or-reordered" ["openai-chat-turn:text-keeps-its-order"] (.proved [``VbmLlm.pair_texts, ``VbmLlm.pairFrom_texts, ``VbmLlm.close_texts]),
   O "turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["openai-chat-turn:prefix-stable"]
     (.proved [``VbmLlm.OpenAI.render_prefix_stable, ``VbmLlm.pair_prefix_stable, ``VbmLlm.pairFrom_append_assistant]),
-  O "anthropic-messages-adapter" [] (.open_ "request and response codecs, named-event stream fold, one user message of tool results, input_tokens excludes the cache (a later slice)"),
+  -- the Anthropic messages adapter: the reply (the request, the stream and the turn shape are open)
+  O "anthropic-reply-decode-is-characterised" ["anthropic-messages:Message.id", "anthropic-messages:Message.model", "anthropic-messages:Message.content", "anthropic-messages:Message.stop_reason", "anthropic-messages:Message.stop_sequence", "anthropic-messages:Message.usage"]
+    (.proved [``VbmLlm.Anthropic.decode_ok_iff, ``VbmLlm.Anthropic.decodeContent_ok_iff, ``VbmLlm.Anthropic.decodeBlocks_ok_iff, ``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.decode_no_content, ``VbmLlm.Anthropic.decode_content_not_array]),
+  O "anthropic-blocks-keep-their-input-and-keep-unmodelled-types-raw" ["anthropic-messages:TextBlock.text", "anthropic-messages:ToolUseBlock.id", "anthropic-messages:ToolUseBlock.name", "anthropic-messages:ToolUseBlock.input", "anthropic-messages:ContentBlock.other", "anthropic-messages:ThinkingBlock.thinking", "anthropic-messages:ThinkingBlock.signature", "anthropic-messages:RedactedThinkingBlock.data"]
+    (.proved [``VbmLlm.Anthropic.decodeBlock_thinking, ``VbmLlm.Anthropic.decodeBlock_redacted, ``VbmLlm.Anthropic.decodeBlock_of_type, ``VbmLlm.Anthropic.decodeBlock_text, ``VbmLlm.Anthropic.decodeBlock_toolUse, ``VbmLlm.Anthropic.decodeBlock_toolUse_no_input, ``VbmLlm.Anthropic.decodeBlock_other, ``VbmLlm.Anthropic.decodeBlock_no_type]),
+  O "usage-anthropic-input-excludes-the-cache" ["anthropic-messages:Usage.input_tokens", "anthropic-messages:Usage.output_tokens", "anthropic-messages:Usage.cache_read_input_tokens", "anthropic-messages:Usage.cache_creation_input_tokens"]
+    (.proved [``VbmLlm.Anthropic.decodeUsage_ok_iff, ``VbmLlm.Anthropic.tokens_uncached, ``VbmLlm.Anthropic.tokens_read, ``VbmLlm.Anthropic.tokens_write, ``VbmLlm.Anthropic.tokens_output, ``VbmLlm.Anthropic.tokens_input, ``VbmLlm.Anthropic.tokens_empty]),
+  O "anthropic-stop-reason-is-kept-as-text-and-classed-totally" ["anthropic-messages:Message.stop_reason"]
+    (.proved [``VbmLlm.FinishClass.ofAnthropic_end_turn, ``VbmLlm.FinishClass.ofAnthropic_stop_sequence, ``VbmLlm.FinishClass.ofAnthropic_tool_use, ``VbmLlm.FinishClass.ofAnthropic_pause_turn, ``VbmLlm.FinishClass.ofAnthropic_refusal,
+      ``VbmLlm.FinishClass.ofAnthropic_truncated_iff, ``VbmLlm.FinishClass.ofAnthropic_unknown]),
+  O "anthropic-messages-adapter" [] (.open_ "the request codec (system at the top level, content blocks, one user message of tool results, max_tokens required), the named-event stream fold, and the turn shape over `pair` (the reply decoder, usage and stop reasons have landed above)"),
   O "openrouter-chat-variant" [] (.open_ "the four deviations of the chat profile: usage in a frame with choices, native_finish_reason, a mid-stream error chunk, comment lines (a later slice)"),
   O "decode-allocation-budget" [] (.open_ "a decoded reply allocates no more than the code it replaces on a recorded reply (measured by the consumer's footprint gate; the budget is stated here when the first consumer measures it)"),
   O "openai-reading-is-faithful-to-the-published-schema" [] (.limit "the clause index (docs/clause-index.txt) is read from the pinned OpenAPI document (docs/schemas/openai-chat.md); that each clause is stated faithfully is checked by review, never by a machine"),

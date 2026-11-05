@@ -1,0 +1,7 @@
+ok
+response id="msg_01" model="m" stop="tool_use" class=callsPending sequence=none
+  text "checking both"
+  tool_use id="a" name="f" input={}
+  tool_use id="b" name="f" input={"x":[1,2,{"y":null}]}
+usage input=10 output=5 read=none write=none
+tokens uncached=10 read=0 write=0 output=5 input_total=10

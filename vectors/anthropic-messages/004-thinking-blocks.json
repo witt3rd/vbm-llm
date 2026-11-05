@@ -1,0 +1,1 @@
+{"id": "msg_01", "type": "message", "role": "assistant", "content": [{"type": "thinking", "thinking": "hmm", "signature": "sig"}, {"type": "redacted_thinking", "data": "opaque"}, {"type": "text", "text": "done"}], "model": "m", "stop_reason": "end_turn", "stop_sequence": null, "usage": {"input_tokens": 10, "output_tokens": 5}}

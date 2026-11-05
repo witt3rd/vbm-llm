@@ -15,6 +15,8 @@ inductive FinishClass where
   | callsPending
   /-- stopped by the provider's content filter or a refusal -/
   | filtered
+  /-- the provider paused a long turn: it is sent back to continue -/
+  | paused
   /-- a word the convention does not list -/
   | unknown
   deriving DecidableEq, Repr
@@ -26,6 +28,7 @@ def name : FinishClass → String
   | .truncated => "truncated"
   | .callsPending => "callsPending"
   | .filtered => "filtered"
+  | .paused => "paused"
   | .unknown => "unknown"
 
 /-- OpenAI chat-completions `finish_reason`: `stop`, `length`, `tool_calls`, `content_filter`, and the deprecated `function_call` (a call is pending, as with `tool_calls`). -/
@@ -35,6 +38,17 @@ def ofOpenAI : String → FinishClass
   | "tool_calls" => .callsPending
   | "function_call" => .callsPending
   | "content_filter" => .filtered
+  | _ => .unknown
+
+/-- Anthropic messages `stop_reason`: `end_turn` and `stop_sequence` finish the turn, `max_tokens` and `model_context_window_exceeded` cut it off, `tool_use` asks for calls, `pause_turn` pauses a long turn, `refusal` is filtered. -/
+def ofAnthropic : String → FinishClass
+  | "end_turn" => .complete
+  | "stop_sequence" => .complete
+  | "max_tokens" => .truncated
+  | "model_context_window_exceeded" => .truncated
+  | "tool_use" => .callsPending
+  | "pause_turn" => .paused
+  | "refusal" => .filtered
   | _ => .unknown
 
 end FinishClass

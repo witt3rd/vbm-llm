@@ -1,0 +1,1 @@
+{"id": "msg_01", "type": "message", "role": "assistant", "content": [{"type": "text", "text": "checking both"}, {"type": "tool_use", "id": "a", "name": "f", "input": {}}, {"type": "tool_use", "id": "b", "name": "f", "input": {"x": [1, 2, {"y": null}]}}], "model": "m", "stop_reason": "tool_use", "stop_sequence": null, "usage": {"input_tokens": 10, "output_tokens": 5}}

@@ -1,0 +1,1 @@
+{"id": "msg_01", "type": "message", "role": "assistant", "content": [{"type": "text", "text": "ok"}, {"type": "text", "text": 5}], "model": "m", "stop_reason": "end_turn", "stop_sequence": null, "usage": {"input_tokens": 10, "output_tokens": 5}}

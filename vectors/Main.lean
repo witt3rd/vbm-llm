@@ -139,6 +139,34 @@ def errorFile (p : FilePath) : IO String := do
       | .ok e => return s!"class {cls}\nok message={e.message.quote} type={optS e.type} param={optS e.param} code={optS e.code}\n"
     | _, _ => return "error\nnot a status and a context_words flag\n"
 
+open VbmLlm VbmLlm.OpenAI in
+def renderBlock : Anthropic.Block → String
+  | .text t => s!"  text {t.quote}"
+  | .toolUse i n inp => s!"  tool_use id={i.quote} name={n.quote} input={String.fromUTF8! (ByteArray.mk (LeanJson.print inp).toArray)}"
+  | .thinking t s => s!"  thinking {t.quote} signature={s.quote}"
+  | .redactedThinking d => s!"  redacted_thinking {d.quote}"
+  | .other v => s!"  other {String.fromUTF8! (ByteArray.mk (LeanJson.print v).toArray)}"
+
+open VbmLlm VbmLlm.OpenAI in
+def renderAnthropic (r : Anthropic.Response) : String :=
+  let cls := match r.stopReason with | none => "none" | some w => (FinishClass.ofAnthropic w).name
+  let usage := match r.usage with
+    | none => "usage none"
+    | some u =>
+      let t := u.tokens
+      s!"usage input={optN u.inputTokens} output={optN u.outputTokens} read={optN u.cacheReadTokens} write={optN u.cacheCreationTokens}\ntokens uncached={t.inputUncached} read={t.inputCacheRead} write={t.inputCacheWrite} output={t.output} input_total={t.input}"
+  "\n".intercalate ([s!"response id={optS r.id} model={optS r.model} stop={optS r.stopReason} class={cls} sequence={optS r.stopSequence}"] ++ r.content.map renderBlock ++ [usage]) ++ "\n"
+
+open VbmLlm in
+def anthropicFile (p : FilePath) : IO String := do
+  let bytes ← IO.FS.readBinFile p
+  match LeanJson.parseFast bytes with
+  | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
+  | .ok v =>
+    match Anthropic.decode v with
+    | .error f => return "error\n" ++ f.render ++ "\n"
+    | .ok r => return "ok\n" ++ renderAnthropic r
+
 def foldFile (p : FilePath) : IO String := do
   let text ← IO.FS.readFile p
   return VbmLlm.OpenAI.renderOutcome (VbmLlm.OpenAI.foldEvents {} parseData (splitEvents text))
@@ -158,17 +186,19 @@ def main (args : List String) : IO UInt32 := do
   let rs ← listDir (dir / "openai-chat-request") "json"
   let ts ← listDir (dir / "openai-chat-turn") "json"
   let es ← listDir (dir / "openai-chat-error") "json"
-  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
+  let ans ← listDir (dir / "anthropic-messages") "json"
+  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty || ans.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
   if args.contains "--write" then
     for p in js do IO.FS.writeFile (p.withExtension "expect") (← decodeFile p)
     for p in ss do IO.FS.writeFile (p.withExtension "expect") (← foldFile p)
     for p in rs do IO.FS.writeFile (p.withExtension "expect") (← decodeRequestFile p)
     for p in ts do IO.FS.writeFile (p.withExtension "expect") (← renderTurnFile p)
     for p in es do IO.FS.writeFile (p.withExtension "expect") (← errorFile p)
-    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size} expectations"; return 0
+    for p in ans do IO.FS.writeFile (p.withExtension "expect") (← anthropicFile p)
+    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size + ans.size} expectations"; return 0
   let mut bad := 0
-  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) do
-    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else errorFile p
+  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) ++ (ans.map (·, 5)) do
+    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else if kind == 4 then errorFile p else anthropicFile p
     let ep := p.withExtension "expect"
     if !(← ep.pathExists) then IO.eprintln s!"vbm-llm-vectors: {p}: no expectation"; bad := bad + 1; continue
     if got != (← IO.FS.readFile ep) then IO.eprintln s!"vbm-llm-vectors: {p}: the result differs from {ep}\n{got}"; bad := bad + 1
@@ -181,7 +211,7 @@ def main (args : List String) : IO UInt32 := do
         -- both render `ok`/`complete` then the same reply lines
         if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
           IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
-  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records and {es.size} failed calls, {bad} differ"
+  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records, {es.size} failed calls and {ans.size} messages replies, {bad} differ"
   if args.contains "--selftest" then
     let p := js[0]!
     let want ← IO.FS.readFile (p.withExtension "expect")
@@ -215,5 +245,13 @@ def main (args : List String) : IO UInt32 := do
     let ow ← errorFile (dir / "openai-chat-error" / "009-context-overflow-by-words.json")
     let on ← errorFile (dir / "openai-chat-error" / "010-same-message-no-words.json")
     if !ow.startsWith "class overflow\n" || on.startsWith "class overflow\n" then IO.eprintln "vbm-llm-vectors: an overflow is not told by the consumer's words"; return 1
-    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn and a tampered failed call"
+    -- Anthropic: a tampered row is rejected, input_tokens excludes the cache (the total adds the cache counts), a block of an unmodelled type is kept
+    let ap := ans[0]!
+    let awant ← IO.FS.readFile (ap.withExtension "expect")
+    if (awant ++ "x") == (← anthropicFile ap) || !awant.startsWith "ok\n" then IO.eprintln "vbm-llm-vectors: the messages check cannot fail"; return 1
+    let cache ← anthropicFile (dir / "anthropic-messages" / "002-tool-use-with-cache.json")
+    if !(cache.contains '=') || (cache.splitOn "input_total=3125").length < 2 then IO.eprintln "vbm-llm-vectors: input_tokens is not read as excluding the cache"; return 1
+    let raw ← anthropicFile (dir / "anthropic-messages" / "005-server-tool-block-kept-raw.json")
+    if (raw.splitOn "  other {").length < 2 then IO.eprintln "vbm-llm-vectors: a block of an unmodelled type was dropped"; return 1
+    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn, a tampered failed call and a cache miscount"
   return if bad == 0 then 0 else 1
