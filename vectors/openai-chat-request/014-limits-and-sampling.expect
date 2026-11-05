@@ -1,0 +1,2 @@
+ok
+{"model":"m","messages":[{"role":"user","content":"hi"}],"max_completion_tokens":120,"max_tokens":0,"temperature":0.2,"top_p":1}

@@ -53,6 +53,24 @@ def decodeFile (p : FilePath) : IO String := do
   | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
   | .ok v => return VbmLlm.OpenAI.renderResult (VbmLlm.OpenAI.decode v)
 
+/-- A request vector: the decoded request is shown as its canonical encoding (the printed `encode`), and the encoding must decode, again from the bytes, to the same canonical text. -/
+def decodeRequestFile (p : FilePath) : IO String := do
+  let bytes ← IO.FS.readBinFile p
+  match LeanJson.parseFast bytes with
+  | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
+  | .ok v =>
+    match VbmLlm.OpenAI.Request.decode v with
+    | .error f => return "error\n" ++ f.render ++ "\n"
+    | .ok r =>
+      let canon := ByteArray.mk (LeanJson.print r.encode).toArray
+      let text := String.fromUTF8! canon
+      match LeanJson.parseFast canon with
+      | .error _ => return "round trip FAILED: the encoding is not JSON\n"
+      | .ok v2 =>
+        match VbmLlm.OpenAI.Request.decode v2 with
+        | .ok r2 => if (LeanJson.print r2.encode) == (LeanJson.print r.encode) then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
+        | .error _ => return "round trip FAILED: the encoding is refused\n"
+
 def foldFile (p : FilePath) : IO String := do
   let text ← IO.FS.readFile p
   return VbmLlm.OpenAI.renderOutcome (VbmLlm.OpenAI.foldEvents {} parseData (splitEvents text))
@@ -69,14 +87,16 @@ def main (args : List String) : IO UInt32 := do
   let dir : FilePath := (args.filter (!·.startsWith "--")).headD "vectors"
   let js ← listDir (dir / "openai-chat") "json"
   let ss ← listDir (dir / "openai-chat-stream") "sse"
-  if js.isEmpty || ss.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
+  let rs ← listDir (dir / "openai-chat-request") "json"
+  if js.isEmpty || ss.isEmpty || rs.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
   if args.contains "--write" then
     for p in js do IO.FS.writeFile (p.withExtension "expect") (← decodeFile p)
     for p in ss do IO.FS.writeFile (p.withExtension "expect") (← foldFile p)
-    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size} expectations"; return 0
+    for p in rs do IO.FS.writeFile (p.withExtension "expect") (← decodeRequestFile p)
+    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size} expectations"; return 0
   let mut bad := 0
-  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) do
-    let got ← if kind == 0 then decodeFile p else foldFile p
+  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) do
+    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else decodeRequestFile p
     let ep := p.withExtension "expect"
     if !(← ep.pathExists) then IO.eprintln s!"vbm-llm-vectors: {p}: no expectation"; bad := bad + 1; continue
     if got != (← IO.FS.readFile ep) then IO.eprintln s!"vbm-llm-vectors: {p}: the result differs from {ep}\n{got}"; bad := bad + 1
@@ -87,7 +107,7 @@ def main (args : List String) : IO UInt32 := do
         -- both render `ok`/`complete` then the same reply lines
         if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
           IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
-  IO.println s!"vbm-llm-vectors: {js.size} replies and {ss.size} streams, {bad} differ"
+  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams and {rs.size} requests, {bad} differ"
   if args.contains "--selftest" then
     let p := js[0]!
     let want ← IO.FS.readFile (p.withExtension "expect")
@@ -101,5 +121,11 @@ def main (args : List String) : IO UInt32 := do
     let text ← IO.FS.readFile q
     let cut := VbmLlm.OpenAI.renderOutcome (VbmLlm.OpenAI.foldEvents {} parseData ((splitEvents text).take 1))
     if cut.startsWith "complete" then IO.eprintln "vbm-llm-vectors: the check cannot fail (a cut stream folds to a complete reply)"; return 1
-    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors and a cut stream"
+    -- a request: a tampered expectation is rejected, and the schema's image example (content parts, not modelled) is refused rather than dropped
+    let rp := rs[0]!
+    let rwant ← IO.FS.readFile (rp.withExtension "expect")
+    if (rwant ++ "x") == (← decodeRequestFile rp) || !rwant.startsWith "ok\n" then IO.eprintln "vbm-llm-vectors: the request check cannot fail (or the first request is not read)"; return 1
+    let img ← decodeRequestFile (dir / "openai-chat-request" / "002-image-input.json")
+    if !img.startsWith "error\n" then IO.eprintln "vbm-llm-vectors: a message with content parts was not refused"; return 1
+    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request and a dropped content part"
   return if bad == 0 then 0 else 1

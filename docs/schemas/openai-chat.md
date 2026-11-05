@@ -28,7 +28,7 @@ The clause index (`clause-index.txt` in this directory's parent) lists every pro
 
 ## Provenance of the vectors
 
-`vectors/openai-chat/001` to `004` are the response examples (Default, Image input, Functions, Logprobs) of `POST /chat/completions` in this document, the text is copied unchanged. The rest are built here to exercise the policy (omitted fields, two choices, empty arguments, truncated arguments, unknown finish reasons, cached tokens, duplicate keys) and each refusal.
+`vectors/openai-chat/001` to `004` are the response examples (Default, Image input, Functions, Logprobs) of `POST /chat/completions` in this document, the text is copied unchanged. `vectors/openai-chat-request/001` to `005` are the request examples (Default, Image input, Streaming, Functions, Logprobs) of the same operation, the JSON bodies copied unchanged out of the `curl` examples (re-indented). The rest are built here to exercise the policy (omitted fields, two choices, empty arguments, truncated arguments, unknown finish reasons, cached tokens, duplicate keys) and each refusal.
 
 ## The stream framing (`openai-chat-sse` in the clause index)
 

@@ -1,0 +1,1 @@
+{"model":"m","messages":[{"role":"assistant","tool_calls":[{"id":"c","type":"custom","custom":{"name":"n","input":"i"}}]}]}

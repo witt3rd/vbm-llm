@@ -1,0 +1,1 @@
+{"model":"m","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"},{"role":"developer","content":"d"}],"tool_choice":"required"}

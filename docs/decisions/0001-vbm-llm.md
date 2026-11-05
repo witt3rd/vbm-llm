@@ -1,6 +1,6 @@
 # 0001. vbm-llm: the wire contract, proved, and nothing else
 
-Status: accepted for the scaffold and the first slice (the OpenAI chat-completions response decoder). The policies in section 4 are the working assumption; each is a claim in the ledger.
+Status: accepted for the scaffold and the first slices (the OpenAI chat-completions response decoder, the stream fold, the request codec). The policies in section 4 are the working assumption; each is a claim in the ledger.
 
 ## 1. Decision
 
@@ -40,4 +40,4 @@ A stream folds to exactly one **outcome**: `complete` (the sentinel was seen and
 
 ## 6. What is not here yet
 
-The request decoder and the round trip (the encoder has landed), the tool-call turn machine, the Anthropic adapter and OpenRouter's variants are open claims in the ledger, in that order. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.
+The tool-call turn machine, the Anthropic adapter and OpenRouter's variants are open claims in the ledger, in that order. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.

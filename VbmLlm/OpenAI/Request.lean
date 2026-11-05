@@ -106,4 +106,120 @@ def Request.encode (r : Request) : Value :=
       (opt "stream_options" (fun b => .obj [("include_usage", .bool b)]) r.includeUsage (opt "max_completion_tokens" (fun n => .num (natNumber n)) r.maxCompletionTokens
         (opt "max_tokens" (fun n => .num (natNumber n)) r.maxTokens (opt "temperature" .num r.temperature (opt "top_p" .num r.topP [])))))))))
 
+/-! ### Decoding: the same typed request, read back (fail closed)
+
+Reading rules: `model` and `messages` (non-empty) are required; every other member is read when present and left `none` (or empty) when absent or `null`; a present member of the wrong type is refused, never
+coerced; a `role` outside the five modelled, or a `content` that is not a string (an array of parts), is refused as not modelled, never dropped; members the type does not model are ignored. -/
+
+def optBool (o : Value) (k : String) : Except Fault (Option Bool) :=
+  match get o k with
+  | .null => .ok none
+  | .bool b => .ok (some b)
+  | _ => .error { path := [.key k], kind := .wrongType .boolean }
+
+def optNum (o : Value) (k : String) : Except Fault (Option Number) :=
+  match get o k with
+  | .null => .ok none
+  | .num n => .ok (some n)
+  | _ => .error { path := [.key k], kind := .wrongType .number }
+
+def optMembers (o : Value) (k : String) : Except Fault (Option (List (String × Value))) :=
+  match get o k with
+  | .null => .ok none
+  | .obj ms => .ok (some ms)
+  | _ => .error { path := [.key k], kind := .wrongType .object }
+
+/-- The members of an array, in order; a fault names the index. -/
+def decodeEach {α : Type} (f : Value → Except Fault α) : List Value → Nat → Except Fault (List α)
+  | [], _ => .ok []
+  | v :: vs, i => do
+    let a ← underStep (.idx i) (f v)
+    let as ← decodeEach f vs (i + 1)
+    pure (a :: as)
+
+def decodeReqMessage (v : Value) : Except Fault RequestMessage :=
+  match v with
+  | .obj _ =>
+    match reqStr v "role" with
+    | .ok "system" => RequestMessage.system <$> reqStr v "content"
+    | .ok "developer" => RequestMessage.developer <$> reqStr v "content"
+    | .ok "user" => RequestMessage.user <$> reqStr v "content"
+    | .ok "assistant" => do
+      let c ← optStr v "content"
+      let cs ← decodeCalls v
+      pure (.assistant c cs)
+    | .ok "tool" => do
+      let i ← reqStr v "tool_call_id"
+      let c ← reqStr v "content"
+      pure (.tool i c)
+    | .ok other => .error { path := [.key "role"], kind := .unsupported other }
+    | .error e => .error e
+  | _ => .error (Fault.here (.wrongType .object))
+
+def decodeTool (v : Value) : Except Fault Tool :=
+  match v with
+  | .obj _ => do
+    checkType v
+    let fn ← reqObj v "function"
+    let name ← underStep (.key "function") (reqStr fn "name")
+    let description ← underStep (.key "function") (optStr fn "description")
+    let parameters ← underStep (.key "function") (optMembers fn "parameters")
+    let strict ← underStep (.key "function") (optBool fn "strict")
+    pure { name, description, parameters, strict }
+  | _ => .error (Fault.here (.wrongType .object))
+
+/-- `tool_choice`: a word of the three, or a named function; any other word is refused as not modelled. -/
+def decodeToolChoice (v : Value) : Except Fault (Option ToolChoice) :=
+  match get v "tool_choice" with
+  | .null => .ok none
+  | .str "none" => .ok (some .never)
+  | .str "auto" => .ok (some .auto)
+  | .str "required" => .ok (some .required)
+  | .str w => .error { path := [.key "tool_choice"], kind := .unsupported w }
+  | .obj ms => underStep (.key "tool_choice") (do
+      checkType (.obj ms)
+      let fn ← reqObj (.obj ms) "function"
+      let n ← underStep (.key "function") (reqStr fn "name")
+      pure (some (.named n)))
+  | _ => .error { path := [.key "tool_choice"], kind := .wrongType .object }
+
+def decodeMessages (v : Value) : Except Fault (List RequestMessage) :=
+  match get v "messages" with
+  | .null => .error { path := [.key "messages"], kind := .missing }
+  | .arr [] => .error { path := [.key "messages"], kind := .empty }
+  | .arr xs => underStep (.key "messages") (decodeEach decodeReqMessage xs 0)
+  | _ => .error { path := [.key "messages"], kind := .wrongType .array }
+
+def decodeTools (v : Value) : Except Fault (List Tool) :=
+  match get v "tools" with
+  | .null => .ok []
+  | .arr xs => underStep (.key "tools") (decodeEach decodeTool xs 0)
+  | _ => .error { path := [.key "tools"], kind := .wrongType .array }
+
+def decodeIncludeUsage (v : Value) : Except Fault (Option Bool) :=
+  match get v "stream_options" with
+  | .null => .ok none
+  | .obj ms => underStep (.key "stream_options") (optBool (.obj ms) "include_usage")
+  | _ => .error { path := [.key "stream_options"], kind := .wrongType .object }
+
+def Request.decodeBody (v : Value) : Except Fault Request := do
+  let model ← reqStr v "model"
+  let messages ← decodeMessages v
+  let tools ← decodeTools v
+  let toolChoice ← decodeToolChoice v
+  let parallelToolCalls ← optBool v "parallel_tool_calls"
+  let stream ← optBool v "stream"
+  let includeUsage ← decodeIncludeUsage v
+  let maxCompletionTokens ← optNat v "max_completion_tokens"
+  let maxTokens ← optNat v "max_tokens"
+  let temperature ← optNum v "temperature"
+  let topP ← optNum v "top_p"
+  pure { model, messages, tools, toolChoice, parallelToolCalls, stream, includeUsage, maxCompletionTokens, maxTokens, temperature, topP }
+
+/-- **Decode a request.** -/
+def Request.decode (v : Value) : Except Fault Request :=
+  match v with
+  | .obj _ => Request.decodeBody v
+  | _ => .error (Fault.here (.wrongType .object))
+
 end VbmLlm.OpenAI

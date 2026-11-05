@@ -60,7 +60,7 @@ def ledger : List Obligation := [
   O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- not yet built (open) and not decidable by a machine (limit)
-  -- the OpenAI chat-completions request (encoder; the decoder and the round trip are the next landing)
+  -- the OpenAI chat-completions request: encoder, decoder, round trip
   O "openai-request-members-are-the-fields" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.parallel_tool_calls", "openai-chat:CreateChatCompletionRequest.stream", "openai-chat:ChatCompletionStreamOptions.include_usage",
       "openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens", "openai-chat:CreateChatCompletionRequest.temperature", "openai-chat:CreateChatCompletionRequest.top_p"]
     (.proved [``VbmLlm.OpenAI.encode_get_model, ``VbmLlm.OpenAI.encode_get_messages, ``VbmLlm.OpenAI.encode_get_tools, ``VbmLlm.OpenAI.encode_get_tool_choice, ``VbmLlm.OpenAI.encode_get_parallel_tool_calls,
@@ -69,7 +69,17 @@ def ledger : List Obligation := [
   O "openai-request-an-absent-field-is-left-out-never-null" ["openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.max_completion_tokens"] (.proved [``VbmLlm.OpenAI.encode_members_not_null, ``VbmLlm.OpenAI.mem_opt]),
   O "openai-request-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens"] (.proved [``VbmLlm.OpenAI.natOf_natNumber, ``VbmLlm.OpenAI.leadRest_val]),
   O "openai-request-tool-calls-are-written-as-read" ["openai-chat:ChatCompletionRequestAssistantMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeToolCall_encodeToolCall]),
-  O "openai-request-codec-round-trip" [] (.open_ "the request decoder and `decode (encode m) = m` on the typed request (the next landing; the encoder is proved above)"),
+  O "openai-request-codec-round-trip" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestDeveloperMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content",
+      "openai-chat:ChatCompletionRequestAssistantMessage.content", "openai-chat:ChatCompletionRequestAssistantMessage.tool_calls", "openai-chat:ChatCompletionRequestToolMessage.tool_call_id", "openai-chat:ChatCompletionRequestToolMessage.content",
+      "openai-chat:ChatCompletionTool.type", "openai-chat:FunctionObject.name", "openai-chat:FunctionObject.description", "openai-chat:FunctionObject.parameters", "openai-chat:FunctionObject.strict",
+      "openai-chat:ChatCompletionNamedToolChoice.function.name", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.tools"]
+    (.proved [``VbmLlm.OpenAI.decode_encode, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessage, ``VbmLlm.OpenAI.decodeTool_encodeTool, ``VbmLlm.OpenAI.decodeMessages_encode, ``VbmLlm.OpenAI.decodeTools_encode,
+      ``VbmLlm.OpenAI.decodeToolChoice_encode, ``VbmLlm.OpenAI.decodeIncludeUsage_encode, ``VbmLlm.OpenAI.decodeEach_encode, ``VbmLlm.OpenAI.decodeToolCalls_encode, ``VbmLlm.OpenAI.optBool_orNull,
+      ``VbmLlm.OpenAI.optNat_orNull, ``VbmLlm.OpenAI.optNum_orNull]),
+  O "openai-request-what-decodes-is-written-back-the-same" ["openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.decode_ok_stable, ``VbmLlm.OpenAI.decodeMessages_ne_nil, ``VbmLlm.OpenAI.decodeEach_cons_ne_nil]),
+  O "openai-request-decode-fails-closed" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.stream"]
+    (.proved [``VbmLlm.OpenAI.Request.decode_not_object, ``VbmLlm.OpenAI.decodeMessages_none, ``VbmLlm.OpenAI.decodeMessages_empty, ``VbmLlm.OpenAI.decodeMessages_not_array,
+      ``VbmLlm.OpenAI.decodeReqMessage_unsupported_role, ``VbmLlm.OpenAI.decodeReqMessage_user_content, ``VbmLlm.OpenAI.decodeToolChoice_unsupported, ``VbmLlm.OpenAI.optBool_wrong]),
   O "openai-stream-merge-rules" ["openai-chat:CreateChatCompletionStreamResponse.id", "openai-chat:CreateChatCompletionStreamResponse.model", "openai-chat:CreateChatCompletionStreamResponse.usage",
       "openai-chat:CreateChatCompletionStreamResponse.choices.finish_reason", "openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionStreamResponseDelta.refusal",
       "openai-chat:ChatCompletionMessageToolCallChunk.id", "openai-chat:ChatCompletionMessageToolCallChunk.function.name", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]

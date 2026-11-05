@@ -1,0 +1,2 @@
+error
+reply.messages[1].role has an unsupported value "function"
