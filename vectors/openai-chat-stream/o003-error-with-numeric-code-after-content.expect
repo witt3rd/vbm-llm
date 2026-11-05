@@ -1,0 +1,6 @@
+error chunk message="Upstream failed"
+response id="gen-abc123" model="openai/gpt-4o"
+choice index=0 finish="error" class=unknown
+  content "Hello"
+  refusal none
+usage none

@@ -2,6 +2,7 @@
 # `openai-chat-turn` is the pairing of tool results with tool calls (docs/schemas/openai-chat.md, the turn section): the schema gives the message shapes, the sequence rule is stated by the vendor's function-calling guide in prose, so every clause is `policy`.
 # `openai-chat-status` is the class of the status of a failed call (VbmLlm.ErrorClass.ofStatus): the schema does not give it, the HTTP status codes' meaning is the standard's and the vendors' error pages, so every clause is `policy`.
 # `anthropic-messages` is the TypeScript type document pinned in docs/schemas/anthropic-messages.md.
+# `openrouter-chat` is the pair of documentation pages pinned in docs/schemas/openrouter-chat.md: OpenAI's profile plus four deviations, every clause `policy` (no machine-readable schema).
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
 # The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
@@ -150,3 +151,11 @@ anthropic-messages ToolUseBlock.caller ignored
 anthropic-messages Usage.cache_creation ignored the breakdown by cache lifetime
 anthropic-messages Usage.service_tier ignored
 anthropic-messages Usage.server_tool_use ignored
+openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
+openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
+openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)
+openrouter-chat mid-stream-error policy a chunk with a top-level `error` and finish reason `error` ends the stream with HTTP 200; the fold stops there with the message and the partial reply
+openrouter-chat comment-lines policy comment lines (`: OPENROUTER PROCESSING`) are not events: the event splitter's
+openrouter-chat Error.code policy a word or a plain natural (the HTTP status before the stream is committed), each read as itself, anything else refused
+openrouter-chat Error.message read string; required
+

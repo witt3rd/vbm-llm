@@ -6,6 +6,7 @@ import VbmLlmProofs.OpenAI.Stream
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
 import VbmLlmProofs.Error
+import VbmLlmProofs.OpenRouter
 import VbmLlmProofs.Anthropic.Response
 /-! # The obligation ledger
 
@@ -131,7 +132,14 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.FinishClass.ofAnthropic_end_turn, ``VbmLlm.FinishClass.ofAnthropic_stop_sequence, ``VbmLlm.FinishClass.ofAnthropic_tool_use, ``VbmLlm.FinishClass.ofAnthropic_pause_turn, ``VbmLlm.FinishClass.ofAnthropic_refusal,
       ``VbmLlm.FinishClass.ofAnthropic_truncated_iff, ``VbmLlm.FinishClass.ofAnthropic_unknown]),
   O "anthropic-messages-adapter" [] (.open_ "the request codec (system at the top level, content blocks, one user message of tool results, max_tokens required), the named-event stream fold, and the turn shape over `pair` (the reply decoder, usage and stop reasons have landed above)"),
-  O "openrouter-chat-variant" [] (.open_ "the four deviations of the chat profile: usage in a frame with choices, native_finish_reason, a mid-stream error chunk, comment lines (a later slice)"),
+  -- OpenRouter's variant of the chat profile
+  O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
+  O "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]
+    (.proved [``VbmLlm.OpenRouter.optCode_ok_iff, ``VbmLlm.OpenRouter.optCode_wrong, ``VbmLlm.OpenRouter.decodeApiError_ok_iff, ``VbmLlm.OpenRouter.decodeApiError_not_object, ``VbmLlm.OpenRouter.decodeApiError_no_error,
+      ``VbmLlm.OpenRouter.decodeApiError_no_message]),
+  O "openrouter-chat-variant" ["openrouter-chat:usage-frame-has-choices", "openrouter-chat:mid-stream-error"]
+    (.partly [``VbmLlm.OpenAI.applyChunk_usage, ``VbmLlm.OpenAI.foldItems_error_chunk, ``VbmLlm.OpenAI.applyChoice_finish]
+      "proved: a usage report is read from any frame (so from one that has choices), an error chunk stops the fold with the partial reply, and the last finish reason wins (a repeated one changes nothing). Open: one theorem about a whole OpenRouter-shaped stream (the repeated finish reason on the usage frame leaves the reply as it was); the recorded stream `o001`, with its single-shot twin, checks it on data. Comment lines are the event splitter's (`vbm-sse`), not this library's"),
   O "decode-allocation-budget" [] (.open_ "a decoded reply allocates no more than the code it replaces on a recorded reply (measured by the consumer's footprint gate; the budget is stated here when the first consumer measures it)"),
   O "openai-reading-is-faithful-to-the-published-schema" [] (.limit "the clause index (docs/clause-index.txt) is read from the pinned OpenAPI document (docs/schemas/openai-chat.md); that each clause is stated faithfully is checked by review, never by a machine"),
   O "provider-honours-the-schema" [] (.limit "that a server sends what its schema says, that tool arguments are valid JSON or fit the declared parameters, that `model` names what served the call: client behaviour, not the wire contract"),

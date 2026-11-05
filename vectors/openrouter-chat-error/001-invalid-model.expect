@@ -1,0 +1,2 @@
+class invalid
+ok message="Invalid model specified" code=num:400

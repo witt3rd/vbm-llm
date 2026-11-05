@@ -1,0 +1,7 @@
+complete
+response id="gen-abc123" model="openai/gpt-4o"
+choice index=0 finish="stop" class=complete
+  content "Hello"
+  refusal none
+usage prompt=10 completion=3 total=13 cached=4 reasoning=1
+tokens uncached=6 read=4 write=0 output=3 reasoning=1

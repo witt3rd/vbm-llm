@@ -15,6 +15,8 @@ inductive FinishClass where
   | callsPending
   /-- stopped by the provider's content filter or a refusal -/
   | filtered
+  /-- the provider ended the generation with an error (OpenRouter's `error`): what was received is partial -/
+  | failed
   /-- the provider paused a long turn: it is sent back to continue -/
   | paused
   /-- a word the convention does not list -/
@@ -29,6 +31,7 @@ def name : FinishClass → String
   | .callsPending => "callsPending"
   | .filtered => "filtered"
   | .paused => "paused"
+  | .failed => "failed"
   | .unknown => "unknown"
 
 /-- OpenAI chat-completions `finish_reason`: `stop`, `length`, `tool_calls`, `content_filter`, and the deprecated `function_call` (a call is pending, as with `tool_calls`). -/
@@ -50,6 +53,11 @@ def ofAnthropic : String → FinishClass
   | "pause_turn" => .paused
   | "refusal" => .filtered
   | _ => .unknown
+
+/-- OpenRouter's chat-completions `finish_reason`: normalized to OpenAI's words plus `error` (a generation that failed after it had begun). -/
+def ofOpenRouter : String → FinishClass
+  | "error" => .failed
+  | w => ofOpenAI w
 
 end FinishClass
 end VbmLlm

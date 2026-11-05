@@ -1,0 +1,6 @@
+error chunk message="Provider disconnected unexpectedly"
+response id="gen-abc123" model="openai/gpt-4o"
+choice index=0 finish="error" class=unknown
+  content ""
+  refusal none
+usage none

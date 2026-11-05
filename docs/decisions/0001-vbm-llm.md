@@ -40,4 +40,4 @@ A stream folds to exactly one **outcome**: `complete` (the sentinel was seen and
 
 ## 6. What is not here yet
 
-The Anthropic adapter (its reply, usage and stop reason have landed: the request codec, the named-event stream fold and the turn shape remain) and OpenRouter's variants are open claims in the ledger, in that order. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.
+The Anthropic adapter (its reply, usage and stop reason have landed: the request codec, the named-event stream fold and the turn shape remain) remain open claims in the ledger. OpenRouter's variant has landed: its deviations are one finish class, a number-or-word error code and the OpenAI fold itself. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.
