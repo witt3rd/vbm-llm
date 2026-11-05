@@ -14,11 +14,12 @@ The history was **not** re-written or re-rooted: every commit hash is the one co
 
 | Check | Result |
 |---|---|
-| gitleaks 8.30.1, full history of every ref of a fresh mirror of the remote (31 commits scanned at that time), and the working tree | 0 findings |
+| gitleaks 8.30.1, full history of every ref of a fresh mirror of the remote, and the working tree | 0 findings |
 | trufflehog 3.99.8, same scope | 0 verified, 0 unverified |
 | the VBM public-readiness lint (hash list of private names, path patterns) over the tree | clean |
 | a scan of every commit message, path, author line and changed line of all refs for the same hashes plus plain patterns (host names, home paths, e-mails, addresses) | only the accepted items above |
-| `scripts/tier1.sh` in a fresh `ubuntu:24.04` container, network cut after the dependency fetch | passes |
+| `scripts/tier1.sh` in a fresh `ubuntu:24.04` container (image `ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852`, no credentials), network cut after the dependency fetch, on `c60aea2` | passes (111 s); a first attempt failed because `coredumpctl` was absent (the crash-record gate refuses to skip): now a documented prerequisite |
+| hosted CI (`ubuntu-latest`), push run of `c60aea2` | Tier 1 green; the first dispatch of Tier 2 failed in `land-check --upstream` (`gh` had no token to clone the public source): the workflow now hands it the default read-only token |
 
 ## The flip, in order
 
