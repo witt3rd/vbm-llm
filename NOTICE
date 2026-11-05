@@ -16,3 +16,7 @@ Third-party material used by this repository:
 
 * Examples from the OpenAI OpenAPI description (https://github.com/openai/openai-openapi, MIT License, Copyright (c) OpenAI): the four chat-completion replies vectors/openai-chat/001 to 004 are
   the response examples of that document, unchanged; the pinned document is identified by hash in docs/schemas/openai-chat.md.
+
+* Examples from the OpenAI OpenAPI description (same document, MIT License): the five request examples vectors/openai-chat-request/001 to 005 are the request bodies of the same operation, unchanged apart from indentation.
+
+* Read, not copied: the Anthropic SDK type definitions (https://github.com/anthropics/anthropic-sdk-typescript, MIT License) and the OpenRouter documentation pages (https://openrouter.ai/docs) are the pinned sources of the Anthropic and OpenRouter adapters; each is identified by URL, date and hash in docs/schemas/. The vectors of those adapters are built in this repository from the shapes those sources give.
