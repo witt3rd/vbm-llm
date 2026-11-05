@@ -7,7 +7,7 @@
 #   (<git common dir>/vbm-land/lock) for its whole cycle and calls this inside it, so no lock is taken; it is not passed on to Tier 1 or the hooks.
 #   land-direct --hold "<reason>" | --release                 stop / allow landings in this clone (checked at the start, after the lock, before the push)
 #   land-direct --freeze "<reason>" --owner NAME --for 6h     freeze landing but for fixes and reverts (owner and expiry are required) | --thaw
-#   land-direct --print-gate-diff-hash FILE [<rev>]           the sha256 of the canonical diff of FILE (merge base with <remote>/<base> to <rev>, default HEAD): the hash of a gate-edit approval
+#   land-direct --print-gate-diff-hash FILE-SET [<rev>]       the sha256 of the canonical diff of FILE (a path, or paths comma-joined; `@protected` = the protected paths the change touches) (merge base with <remote>/<base> to <rev>, default HEAD): the hash of a gate-edit approval
 #   land-direct --print-gate-diff FILE [<rev>]                the canonical diff itself (lib/approvals.sh, docs/gate-edit-approvals.md)
 #   land-direct --status | --version
 #
@@ -42,7 +42,7 @@ o_lock=${LAND_LOCK_WAIT_SECONDS:-}; o_t1=${LAND_TIER1_TIMEOUT:-}; o_st=${LAND_ST
 conf_defaults
 gh=${GH:-gh}; export GH=$gh
 
-usage() { echo "usage: land-direct [--dry-run] [--check] [--group] [--conf PATH] [<rev>] | --hold REASON | --release | --freeze REASON --owner NAME --for DURATION | --thaw | --status | --print-gate-diff-hash FILE [<rev>] | --print-gate-diff FILE [<rev>] | --version" >&2; exit 2; }
+usage() { echo "usage: land-direct [--dry-run] [--check] [--group] [--conf PATH] [<rev>] | --hold REASON | --release | --freeze REASON --owner NAME --for DURATION | --thaw | --status | --print-gate-diff-hash FILE-SET [<rev>] | --print-gate-diff FILE-SET [<rev>] | --version" >&2; exit 2; }
 dry=0; checkonly=0; group=0; confpath=scripts/land.conf; [ -z "$o_conf" ] || confpath=$o_conf; args=(); op=; opreason=; owner=; dur=; pfile=
 while [ $# -gt 0 ]; do case $1 in
   --dry-run) dry=1;; --check) checkonly=1;; --group) group=1;;
@@ -120,15 +120,26 @@ export LC_ALL=$LAND_LOCALE
 lt=${o_t1:-$LAND_TIER1_TIMEOUT}; st=${o_st:-$LAND_STEP_TIMEOUT}; gt=${o_gt:-$LAND_GIT_TIMEOUT}; wait_s=${o_lock:-$LAND_LOCK_WAIT}
 export LAND_TOP=$top LAND_BASE_REF=$remote/$base LAND_STATE_DIR=$state
 read -ra prot_globs <<<"$LAND_PROTECTED"; read -ra fix_globs <<<"$LAND_FIX_PATHS"
-prot_globs+=("$LAND_APPROVALS")   # the approvals file is always protected: a gate-defining file in every repository
-if [ "$op" = print ]; then   # the canonical diff of one file, for the author of a gate-edit approval (hash on stdout; the record to write on stderr)
-  ga_valid_path "$pfile" || badinput "'$pfile' is not a plain repository path"
+prot_globs+=("$LAND_APPROVALS"); [ -z "$LAND_PROTECTED_APPROVALS" ] || prot_globs+=("$LAND_PROTECTED_APPROVALS")   # the approvals files are always protected: gate-defining files in every repository
+# LAND_PROTECTED_LIST (optional): the protected-set rule of lib/approvals.sh. The lander also protects the list itself, its own configuration and its hooks directory under it; the approvals files have rules of their own.
+pap=${LAND_PROTECTED_APPROVALS:-$LAND_APPROVALS}; prot_exempt=$LAND_APPROVALS; [ "$pap" = "$LAND_APPROVALS" ] || prot_exempt="$LAND_APPROVALS $pap"
+prot_extra=$LAND_PROTECTED_LIST; ! ga_valid_path "$confpath" || prot_extra="$prot_extra $confpath"; ! ga_valid_path "$LAND_HOOKS_DIR" || prot_extra="$prot_extra $LAND_HOOKS_DIR/"
+if [ "$op" = print ]; then   # the canonical diff of one file or one file-set, for the author of an approval (hash on stdout; the record to write on stderr). `@protected`: the protected paths this change touches
   pt=$(git -C "$top" rev-parse --verify -q "${args[0]:-HEAD}^{commit}") || badinput "no such revision: ${args[0]:-HEAD}"
   pmb=$(git -C "$top" merge-base "$remote/$base" "$pt") || badinput "no merge base of $remote/$base and ${args[0]:-HEAD}"
+  if [ "$pfile" = @protected ]; then
+    [ -n "$LAND_PROTECTED_LIST" ] || badinput "@protected: this repository sets no LAND_PROTECTED_LIST"
+    ga_protected_touched "$top" "$remote/$base" "$pmb" "$pt" "$LAND_PROTECTED_LIST" "$prot_extra" "$prot_exempt" "$state" >"$state/print-touched"
+    [ -z "$ga_ptfail" ] || badinput "$ga_ptfail"
+    pfile=$(LC_ALL=C sort -u "$state/print-touched" | paste -sd,); [ -n "$pfile" ] || badinput "no protected path differs between the merge base with $remote/$base and ${args[0]:-HEAD}: nothing to approve"
+  fi
+  IFS=, read -ra pset <<<"$pfile"; [ ${#pset[@]} -gt 0 ] || badinput "no file given"
+  for f in "${pset[@]}"; do ga_valid_path "$f" || badinput "'$f' is not a plain repository path"; done
+  pfile=$(printf '%s\n' "${pset[@]}" | LC_ALL=C sort -u | paste -sd,); IFS=, read -ra pset <<<"$pfile"   # the canonical key: sorted, unique, comma-joined
   if [ "$opreason" = -hash ]; then
-    ph=$(ga_hash "$top" "$pmb" "$pt" "$pfile") || badinput "$pfile does not differ between the merge base with $remote/$base and ${args[0]:-HEAD}: nothing to approve"
+    ph=$(ga_hash "$top" "$pmb" "$pt" "${pset[@]}") || badinput "$pfile does not differ between the merge base with $remote/$base and ${args[0]:-HEAD}: nothing to approve"
     echo "$ph"; echo "land-direct: the record (reason and date yours; it lands ALONE and is announced to the judge BEFORE the edit): $pfile | $ph | <reason> | $(date -u +%F)" >&2
-  else ga_canon "$top" "$pmb" "$pt" "$pfile"; fi
+  else ga_canon "$top" "$pmb" "$pt" "${pset[@]}"; fi
   exit 0
 fi
 
@@ -179,7 +190,7 @@ if [ -n "$LAND_PROD_PATHS" ] && [ "$LAND_BUDGET_LINES" -gt 0 ]; then
   if [ "$prod" -gt "$LAND_BUDGET_LINES" ] && [ -z "$budget" ] && [ "$group" = 0 ]; then die "$prod production lines (${LAND_PROD_PATHS}, not generated) exceed the $LAND_BUDGET_LINES-line budget and no commit carries a 'Diff-Budget: <decomposition note>' trailer; not landing."; fi
 fi
 echo "land-direct: $ncommits commit(s); config $confsrc$([ "$LAND_BUDGET_LINES" = 0 ] || [ -z "$LAND_PROD_PATHS" ] || echo "; diff budget: $prod production lines (budget $LAND_BUDGET_LINES$([ "$prod" -le "$LAND_BUDGET_LINES" ] || echo ", waived: ${budget:-by --group: the caller checked each entry}"))")"
-ga_early "$top" "$commits" "$LAND_APPROVALS" || stop 12 refused "a gate-edit approval lands alone (see above); not landing."
+ga_early "$top" "$commits" "$LAND_APPROVALS" && { [ "$pap" = "$LAND_APPROVALS" ] || [ -z "$LAND_PROTECTED_LIST" ] || ga_early "$top" "$commits" "$pap"; } || stop 12 refused "a gate-edit approval lands alone (see above); not landing."
 [ "$checkonly" = 0 ] || { result=checked; echo "land-direct: --check: the land-time checks pass; nothing rebased, tested or pushed"; exit 0; }
 first_trailer=${LAND_REQUIRE_TRAILERS%% *}; task=
 [ -z "$first_trailer" ] || task=$(git -C "$top" log -1 --format=%B "$tip0" | sed -n "s/^$first_trailer: *//p" | sed -n 1p)
@@ -287,7 +298,7 @@ for attempt in 1 2 3; do
   export LAND_PROTECTED_TOUCHED=${prot_hit# }
   [ -z "$prot_hit" ] && echo "land-direct: protected set: none touched" || echo "land-direct: protected set: TOUCHED ($LAND_PROTECTED_TOUCHED): allowed, every gate must pass"
   export LAND_GATE_APPROVED_FILE=$state/approved-gate-edits.txt   # the approvals this landing consumes (`FILE HASH` per line): a repository's own judge may accept those files' removed lines
-  ga_judge_run "$wt" "$remote/$base" "$LAND_APPROVALS" "$LAND_APPROVAL_DAYS" "$LAND_GATE_APPEND_ONLY" "$state" || stop 12 refused "the gate-edit judge refused this change (approvals: docs/gate-edit-approvals.md; see above)"
+  ga_judge_run "$wt" "$remote/$base" "$LAND_APPROVALS" "$LAND_APPROVAL_DAYS" "$LAND_GATE_APPEND_ONLY" "$state" "$LAND_PROTECTED_LIST" "$pap" "$prot_extra" || stop 12 refused "the gate-edit judge refused this change (approvals: docs/gate-edit-approvals.md; see above)"
   run_hook post-rebase || stop 12 refused "the post-rebase hook refused this change (protected set / gate checks; see above)"
   if [ -x "$wt/scripts/land/bin/land-check" ] && [ -e "$wt/scripts/land/PIN" ]; then   # a vendored copy of this tool: it must still be what its pin says
     rc=0; (cd "$wt" && bounded "$st" "vendored-copy drift check" scripts/land/bin/land-check) >&2 || rc=$?
@@ -304,6 +315,8 @@ for attempt in 1 2 3; do
   if [ -n "$dirty" ]; then
     trailers=; for t in $LAND_REQUIRE_TRAILERS; do trailers="$trailers$(g log -1 --format=%B "$tip0" | sed -n "s/^$t: *//p" | sed -n 1p | sed "s/^/$t: /")"$'\n'; done
     g add -A; g commit -qm "chore: regenerate generated files after rebase onto $base" -m "Generated by land-direct." ${trailers:+-m "${trailers%$'\n'}"}
+    # the commit just made is part of what lands: with a protected list the whole judge runs again on it (a generated path that is protected must not change after the verdict)
+    [ -z "$LAND_PROTECTED_LIST" ] || ga_judge_run "$wt" "$remote/$base" "$LAND_APPROVALS" "$LAND_APPROVAL_DAYS" "$LAND_GATE_APPEND_ONLY" "$state" "$LAND_PROTECTED_LIST" "$pap" "$prot_extra" || stop 12 refused "the gate-edit judge refused the tree after Tier 1 regenerated files (see above)"
   fi
   sha=$(g rev-parse HEAD)
   bounded "$gt" "git fetch" git -C "$wt" fetch -q "$remote" "$base" || die "cannot fetch $remote $base (timed out or failed)"

@@ -24,3 +24,6 @@ LAND_RED_MODE=push
 # Gate-edit approvals (docs/gate-edit-approvals.md): files that may only GAIN lines; a removed or changed line needs an exact-diff approval already on main.
 #LAND_GATE_APPEND_ONLY=scripts/tier1.sh scripts/gates/*
 #LAND_APPROVAL_DAYS=7
+# Protected sets: a landing that touches a path of this list (the list, the configuration and the hooks always count) needs a one-time approval for exactly that set of paths already on main.
+#LAND_PROTECTED_LIST=scripts/protected-paths.txt
+#LAND_PROTECTED_APPROVALS=scripts/protected-approvals.txt
