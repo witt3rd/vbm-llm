@@ -64,3 +64,10 @@ scripts/lib-ran.sh
 scripts/check-zero-warning.sh
 scripts/test_ran_evidence.sh
 scripts/ran-gates.txt
+# The scoped-run helpers (scripts/run-scoped.sh, scripts/long-runners.txt): a gate runs the lint and the tests that source scripts/lib-reap.sh, so anything in them runs inside the gate (an `exit 0` would bypass it).
+scripts/lib-reap.sh
+scripts/run-scoped.sh
+scripts/lint-scoped-runners.sh
+scripts/long-runners.txt
+scripts/test_reap.sh
+scripts/test_run_scoped.sh
