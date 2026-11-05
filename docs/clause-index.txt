@@ -1,4 +1,5 @@
 # The clause index (`openai-chat` is the OpenAPI document pinned in docs/schemas/openai-chat.md; `openai-chat-sse` is the stream framing, which that document does not specify: it is taken from the vendor's streaming description and OpenRouter's documented examples, always `policy`): the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
+# `openai-chat-turn` is the pairing of tool results with tool calls (docs/schemas/openai-chat.md, the turn section): the schema gives the message shapes, the sequence rule is stated by the vendor's function-calling guide in prose, so every clause is `policy`.
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
 # The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
@@ -101,3 +102,10 @@ openai-chat ChatCompletionRequestAssistantMessage.function_call ignored not mode
 openai-chat ChatCompletionRequestFunctionMessage ignored not modelled
 openai-chat ChatCompletionRequestSystemMessage.name ignored not modelled
 openai-chat ChatCompletionRequestUserMessage.name ignored not modelled
+openai-chat-turn window policy the window of a turn is the entries after it up to the next assistant entry (a text or another turn); only a result in the window can answer one of its calls
+openai-chat-turn answer-each-call-once policy every call of a turn is answered exactly once, in call order, directly after the assistant message, by a `tool` message carrying the call's id
+openai-chat-turn newest-result-wins policy of several results recorded for one call id in the window, the newest is the answer
+openai-chat-turn unanswered-placeholder policy a call with no result in its window is shown with a placeholder text (the consumer's policy), so the request is well formed
+openai-chat-turn orphan-is-text policy a result that answers no call of the turn it sits in is shown as plain user text (the consumer's policy), never as a `tool` message
+openai-chat-turn text-keeps-its-order policy the other entries of a window are kept in order, after the turn's tool messages
+openai-chat-turn prefix-stable policy extending the conversation by an assistant entry leaves every earlier message as it was, byte for byte (cache coherence)

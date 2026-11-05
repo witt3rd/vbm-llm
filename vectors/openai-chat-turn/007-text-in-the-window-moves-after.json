@@ -1,0 +1,1 @@
+[{"kind": "turn", "calls": [{"id": "c1", "name": "f", "arguments": "{}"}]}, {"kind": "text", "role": "user", "content": "also this"}, {"kind": "result", "id": "c1", "content": "done"}, {"kind": "text", "role": "assistant", "content": "ok"}]

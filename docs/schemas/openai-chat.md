@@ -33,3 +33,7 @@ The clause index (`clause-index.txt` in this directory's parent) lists every pro
 ## The stream framing (`openai-chat-sse` in the clause index)
 
 The OpenAPI document gives the shape of a chunk but not the framing. The framing the library relies on, from the vendor's streaming description and OpenRouter's documented examples (`https://openrouter.ai/docs/api-reference/streaming`, read 2026-11-05): events carry only `data` lines, no `event:` type; the stream ends with the sentinel `data: [DONE]`; the final usage frame (`stream_options.include_usage`) has an empty `choices`; a chunk may carry an `error` after content has been sent, with the HTTP status still 200. These are `policy` clauses, stated as policy because no machine-readable source pins them; they are checked by the recorded streams in `vectors/openai-chat-stream/`.
+
+## The turn rule (`openai-chat-turn` in the clause index)
+
+The schema gives the shape of an assistant message with `tool_calls` and of a `tool` message (`tool_call_id`, `content`) but not the sequence rule; the vendor's function-calling guide states in prose that every call must be answered by a `tool` message carrying its id, directly after the assistant message. The turn machine (`VbmLlm.pair`, `VbmLlm.OpenAI.render`) decides that sequence from a recorded conversation; every clause is `policy` and is checked by the recorded conversations in `vectors/openai-chat-turn/`, whose rendering is also checked by a second, independent implementation of the rule in the checker. That the provider **accepts** the sequence is not claimed.
