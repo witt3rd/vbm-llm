@@ -1,0 +1,69 @@
+import VbmLlmProofs.Wire
+import VbmLlmProofs.Finish
+import VbmLlmProofs.Usage
+import VbmLlmProofs.OpenAI.Response
+/-! # The obligation ledger
+
+Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
+`partly` when theorems cover only a part (the note says which part is open), `open_` when nothing is proved, or `limit` when no machine decides it (the note says who carries it).
+Each claim may carry **spec-clause tags** `convention:clause-id` naming the clauses of the pinned convention (`docs/clause-index.txt`) it is about.
+`scripts/LedgerGate.lean` renders `docs/proof-ledger.md` from this list, checks the tags against the index and ratchets the counts: proved may only rise, open may only fall, clause coverage may only rise.
+A report may not call anything verified that is not `proved`. -/
+
+inductive Status where
+  | proved (thms : List Lean.Name)
+  | partly (thms : List Lean.Name) (open_ : String)
+  | open_ (note : String)
+  | limit (carriedBy : String)
+
+structure Obligation where
+  slug    : String
+  clauses : List String
+  status  : Status
+
+def O (slug : String) (clauses : List String) (s : Status) : Obligation := ⟨slug, clauses, s⟩
+
+def ledger : List Obligation := [
+  -- reading a parsed value
+  O "wire-duplicate-key-later-wins" [] (.proved [``VbmLlm.lookup_snoc, ``VbmLlm.lookup_absent, ``VbmLlm.lookup_eq, ``VbmLlm.get_nonobj]),
+  O "wire-a-count-is-a-plain-natural" [] (.proved [``VbmLlm.natOf_neg, ``VbmLlm.natOf_frac, ``VbmLlm.natOf_exp, ``VbmLlm.natOf_zero, ``VbmLlm.natOf_nz, ``VbmLlm.natOf_120, ``VbmLlm.nat?_nonnum]),
+  -- the OpenAI chat-completions response
+  O "openai-reply-decode-is-characterised" ["openai-chat:CreateChatCompletionResponse.id", "openai-chat:CreateChatCompletionResponse.model", "openai-chat:CreateChatCompletionResponse.choices.index"]
+    (.proved [``VbmLlm.OpenAI.decode_ok_iff, ``VbmLlm.OpenAI.decodeChoice_ok_iff, ``VbmLlm.OpenAI.decodeChoices_ok_iff]),
+  O "openai-reply-must-be-an-object" ["openai-chat:CreateChatCompletionResponse.choices"] (.proved [``VbmLlm.OpenAI.decode_not_object]),
+  O "openai-choices-required-array-and-non-empty" ["openai-chat:CreateChatCompletionResponse.choices"]
+    (.proved [``VbmLlm.OpenAI.decode_no_choices, ``VbmLlm.OpenAI.decode_empty_choices, ``VbmLlm.OpenAI.decode_choices_not_array, ``VbmLlm.OpenAI.decodeChoicesField_ok_iff]),
+  O "openai-choice-requires-a-message" ["openai-chat:CreateChatCompletionResponse.choices.message"] (.proved [``VbmLlm.OpenAI.decodeChoice_no_message_refused, ``VbmLlm.OpenAI.decodeChoice_ok_iff]),
+  O "openai-message-text-is-string-or-null" ["openai-chat:ChatCompletionResponseMessage.content", "openai-chat:ChatCompletionResponseMessage.refusal"]
+    (.proved [``VbmLlm.OpenAI.decodeMessage_ok_iff, ``VbmLlm.OpenAI.optStr_ok_iff, ``VbmLlm.OpenAI.optStr_wrong]),
+  O "openai-tool-calls-absent-or-an-array-of-calls" ["openai-chat:ChatCompletionResponseMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeCalls_ok_iff, ``VbmLlm.OpenAI.decodeToolCalls_ok_iff]),
+  O "openai-tool-call-shape" ["openai-chat:ChatCompletionMessageToolCall.id", "openai-chat:ChatCompletionMessageToolCall.function.name", "openai-chat:ChatCompletionMessageToolCall.function.arguments"]
+    (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff, ``VbmLlm.OpenAI.decodeToolCall_no_function_refused]),
+  O "openai-tool-call-other-types-refused" ["openai-chat:ChatCompletionMessageToolCall.type"]
+    (.proved [``VbmLlm.OpenAI.checkType_ok_iff, ``VbmLlm.OpenAI.checkType_unsupported, ``VbmLlm.OpenAI.decodeToolCall_custom_refused]),
+  O "openai-tool-arguments-are-verbatim-text" ["openai-chat:ChatCompletionMessageToolCall.function.arguments"] (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff]),
+  O "openai-usage-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionResponse.usage", "openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.completion_tokens",
+      "openai-chat:CompletionUsage.total_tokens", "openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens", "openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
+    (.proved [``VbmLlm.OpenAI.decodeUsage_ok_iff, ``VbmLlm.OpenAI.decodeUsageOpt_ok_iff, ``VbmLlm.OpenAI.optNat_ok_iff, ``VbmLlm.OpenAI.optNat_wrong, ``VbmLlm.OpenAI.optDetail_ok_iff]),
+  O "openai-no-coercion" ["openai-chat:CreateChatCompletionResponse.id"]
+    (.proved [``VbmLlm.OpenAI.decode_id_wrong_type, ``VbmLlm.OpenAI.optStr_wrong, ``VbmLlm.OpenAI.optNat_wrong, ``VbmLlm.OpenAI.reqStr_wrong, ``VbmLlm.OpenAI.reqObj_wrong]),
+  O "openai-finish-reason-is-kept-as-text-and-classed-totally" ["openai-chat:CreateChatCompletionResponse.choices.finish_reason"]
+    (.proved [``VbmLlm.FinishClass.ofOpenAI_stop, ``VbmLlm.FinishClass.ofOpenAI_length, ``VbmLlm.FinishClass.ofOpenAI_tool_calls, ``VbmLlm.FinishClass.ofOpenAI_function_call,
+      ``VbmLlm.FinishClass.ofOpenAI_content_filter, ``VbmLlm.FinishClass.ofOpenAI_unknown, ``VbmLlm.FinishClass.ofOpenAI_truncated_iff]),
+  -- usage arithmetic
+  O "usage-openai-prompt-includes-the-cache" ["openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens"]
+    (.proved [``VbmLlm.OpenAI.tokens_ok_iff, ``VbmLlm.OpenAI.openai_input_eq_prompt, ``VbmLlm.OpenAI.openai_uncached, ``VbmLlm.OpenAI.openai_read, ``VbmLlm.OpenAI.openai_no_write, ``VbmLlm.OpenAI.openai_output, ``VbmLlm.OpenAI.openai_total]),
+  O "usage-a-contradictory-report-is-refused-not-clamped" ["openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
+    (.proved [``VbmLlm.OpenAI.openai_cached_exceeds_refused, ``VbmLlm.OpenAI.openai_reasoning_exceeds_refused]),
+  O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
+  O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
+  -- not yet built (open) and not decidable by a machine (limit)
+  O "openai-request-codec-round-trip" [] (.open_ "request encode and decode: `decode (encode m) = m` on the typed request (a later slice)"),
+  O "openai-stream-fold-equals-single-shot" [] (.open_ "a stream of chunks folds to exactly the reply the single-shot decode gives, and a stream with no terminal event is Truncated (a later slice, over the SSE event interface)"),
+  O "openai-tool-call-turn-pairing" [] (.open_ "every call of an assistant turn answered exactly once, in order; the rendered prefix stable when the context is extended (a later slice)"),
+  O "anthropic-messages-adapter" [] (.open_ "request and response codecs, named-event stream fold, one user message of tool results, input_tokens excludes the cache (a later slice)"),
+  O "openrouter-chat-variant" [] (.open_ "the four deviations of the chat profile: usage in a frame with choices, native_finish_reason, a mid-stream error chunk, comment lines (a later slice)"),
+  O "decode-allocation-budget" [] (.open_ "a decoded reply allocates no more than the code it replaces on a recorded reply (measured by the consumer's footprint gate; the budget is stated here when the first consumer measures it)"),
+  O "openai-reading-is-faithful-to-the-published-schema" [] (.limit "the clause index (docs/clause-index.txt) is read from the pinned OpenAPI document (docs/schemas/openai-chat.md); that each clause is stated faithfully is checked by review, never by a machine"),
+  O "provider-honours-the-schema" [] (.limit "that a server sends what its schema says, that tool arguments are valid JSON or fit the declared parameters, that `model` names what served the call: client behaviour, not the wire contract"),
+  O "the-pinned-parser-is-the-rfc-8259-reference" [] (.limit "the parse of the bytes is vbm-json's `parseFast`, proved there equal to its RFC 8259 reference; this library pins its revision and hash (scripts/pinned-libs.lock) and does not re-prove it")]

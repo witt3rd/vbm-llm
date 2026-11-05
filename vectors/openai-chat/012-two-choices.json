@@ -1,0 +1,1 @@
+{"id":"x","model":"m","choices":[{"index":0,"message":{"role":"assistant","content":"a"},"finish_reason":"stop"},{"index":1,"message":{"role":"assistant","content":"b"},"finish_reason":"length"}]}

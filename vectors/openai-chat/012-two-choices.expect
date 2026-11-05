@@ -1,0 +1,9 @@
+ok
+response id="x" model="m"
+choice index=0 finish="stop" class=complete
+  content "a"
+  refusal none
+choice index=1 finish="length" class=truncated
+  content "b"
+  refusal none
+usage none

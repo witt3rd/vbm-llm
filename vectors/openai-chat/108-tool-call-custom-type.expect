@@ -1,0 +1,2 @@
+error
+reply.choices[0].message.tool_calls[0].type has an unsupported value "custom"

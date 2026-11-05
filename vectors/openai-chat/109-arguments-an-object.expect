@@ -1,0 +1,2 @@
+error
+reply.choices[0].message.tool_calls[0].function.arguments is not a string

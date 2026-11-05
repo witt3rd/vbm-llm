@@ -1,0 +1,7 @@
+ok
+response id=none model=none
+choice index=none finish=none class=none
+  content "x"
+  refusal none
+usage prompt=10 completion=none total=none cached=11 reasoning=none
+tokens refused cachedExceedsPrompt prompt=10 cached=11

@@ -1,0 +1,6 @@
+ok
+response id=none model="b"
+choice index=none finish=none class=none
+  content "second"
+  refusal none
+usage none

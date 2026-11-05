@@ -1,0 +1,1 @@
+{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"a","function":{"name":"n","arguments":"{}"}},{"id":"b","function":{"name":"n"}}]}}]}

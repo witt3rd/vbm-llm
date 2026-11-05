@@ -1,0 +1,47 @@
+import VbmLlm.OpenAI.Response
+import VbmLlm.Finish
+import VbmLlm.Usage
+/-! # A plain-text rendering of a decoded reply, and of a refusal
+
+For the recorded conformance vectors (`vectors/`) and for diagnostics: one line per fact, strings quoted, nothing that depends on the machine. The rendering is **not** a wire format and
+nothing parses it. -/
+namespace VbmLlm.OpenAI
+
+def optS (o : Option String) : String :=
+  match o with
+  | none => "none"
+  | some s => s.quote
+
+def optN (o : Option Nat) : String :=
+  match o with
+  | none => "none"
+  | some n => toString n
+
+def ToolCall.render (c : ToolCall) : String := s!"  call id={c.id.quote} name={c.name.quote} arguments={c.arguments.quote}"
+
+def Choice.render (c : Choice) : String :=
+  let cls := match c.finishReason with
+    | none => "none"
+    | some w => (FinishClass.ofOpenAI w).name
+  String.intercalate "\n" (
+    [s!"choice index={optN c.index} finish={optS c.finishReason} class={cls}", s!"  content {optS c.message.content}", s!"  refusal {optS c.message.refusal}"] ++
+    c.message.toolCalls.map ToolCall.render)
+
+def Usage.render (u : Usage) : String :=
+  let t := match u.tokens with
+    | .ok t => s!"tokens uncached={t.inputUncached} read={t.inputCacheRead} write={t.inputCacheWrite} output={t.output} reasoning={t.reasoning}"
+    | .error (.cachedExceedsPrompt p c) => s!"tokens refused cachedExceedsPrompt prompt={p} cached={c}"
+    | .error (.reasoningExceedsCompletion o r) => s!"tokens refused reasoningExceedsCompletion completion={o} reasoning={r}"
+  s!"usage prompt={optN u.promptTokens} completion={optN u.completionTokens} total={optN u.totalTokens} cached={optN u.cachedTokens} reasoning={optN u.reasoningTokens}\n{t}"
+
+def Response.render (r : Response) : String :=
+  String.intercalate "\n" (
+    [s!"response id={optS r.id} model={optS r.model}"] ++ r.choices.map Choice.render ++
+    (match r.usage with | none => ["usage none"] | some u => [u.render]))
+
+/-- `ok` and the rendering, or `error` and the refusal. -/
+def renderResult : Except Fault Response → String
+  | .ok r => "ok\n" ++ r.render ++ "\n"
+  | .error f => "error\n" ++ f.render ++ "\n"
+
+end VbmLlm.OpenAI

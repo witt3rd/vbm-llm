@@ -1,0 +1,8 @@
+ok
+response id=none model=none
+choice index=0 finish="tool_calls" class=callsPending
+  content none
+  refusal none
+  call id="c1" name="list" arguments=""
+  call id="c2" name="read" arguments="{\"path\":\"a\"}"
+usage none

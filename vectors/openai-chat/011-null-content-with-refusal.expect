@@ -1,0 +1,6 @@
+ok
+response id="x" model=none
+choice index=0 finish="stop" class=complete
+  content none
+  refusal "I cannot help with that."
+usage none
