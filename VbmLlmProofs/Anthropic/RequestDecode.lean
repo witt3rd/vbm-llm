@@ -4,7 +4,7 @@ import VbmLlmProofs.Anthropic.Request
 
 * **The round trip** (`decode_encode`): decoding an encoded request gives the request back, for every request that has a message (the schema requires one), block by block, tool by tool, choice by choice.
 * **What decodes is written back the same** (`decode_ok_stable`): `decode (encode r) = r` for whatever a decode yields.
-* **Fail closed** (`decode_not_object`, `decodeMsgs_*`, `decodeMsg_unsupported_role`, `decodeReqBlock_unsupported_type`, `decodeToolPick_unsupported`, `reqNat_missing`): a request that is not an object, a request with no `max_tokens`
+* **Fail closed** (`Request.decode_not_object`, `decodeMsgs_*`, `decodeMsg_unsupported_role`, `decodeReqBlock_unsupported_type`, `decodeToolPick_unsupported`, `reqNat_missing`): a request that is not an object, a request with no `max_tokens`
   or no (or an empty, or a non-array) `messages`, a role, a block type or a `tool_choice` word that is not modelled is refused, never read as another. -/
 namespace VbmLlm.Anthropic
 open LeanJson
@@ -95,7 +95,7 @@ theorem decode_encode (r : Request) (h : r.messages ≠ []) : Request.decode r.e
 /-! ### Refusals (fail closed) -/
 
 /-- A request that is not an object is refused. -/
-theorem decode_not_object (v : Value) (h : ∀ ms, v ≠ .obj ms) (r : Request) : Request.decode v ≠ .ok r := by
+theorem Request.decode_not_object (v : Value) (h : ∀ ms, v ≠ .obj ms) (r : Request) : Request.decode v ≠ .ok r := by
   cases v <;> simp [Request.decode] <;> exact absurd rfl (h _)
 
 /-- `max_tokens` is required: a request without it is refused. -/

@@ -157,7 +157,7 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.Anthropic.decode_ok_stable, ``VbmLlm.Anthropic.decodeMsgs_ne_nil]),
   O "anthropic-request-decode-fails-closed" ["anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.tool_choice",
       "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content"]
-    (.proved [``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.reqNat_missing, ``VbmLlm.Anthropic.decodeMsgs_none, ``VbmLlm.Anthropic.decodeMsgs_empty, ``VbmLlm.Anthropic.decodeMsgs_not_array,
+    (.proved [``VbmLlm.Anthropic.Request.decode_not_object, ``VbmLlm.Anthropic.reqNat_missing, ``VbmLlm.Anthropic.decodeMsgs_none, ``VbmLlm.Anthropic.decodeMsgs_empty, ``VbmLlm.Anthropic.decodeMsgs_not_array,
       ``VbmLlm.Anthropic.decodeMsg_unsupported_role, ``VbmLlm.Anthropic.decodeReqBlock_unsupported_type, ``VbmLlm.Anthropic.decodeToolPick_unsupported]),
   O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold and the turn shape over `pair` (the reply decoder, usage, stop reasons and the request codec with its round trip have landed above)"),
   -- OpenRouter's variant of the chat profile
