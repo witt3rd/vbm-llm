@@ -1,0 +1,5 @@
+# The pinned libraries (scripts/pinned-lib.py defines the format and the hash; docs/decisions/0001-vbm-llm.md says why). PROTECTED: a changed line is a gate-defining change judged by the relabel-attack suite, and the
+# tree is the pinned library only while the library on disk matches its line here (the lake manifest's rev, the checkout's HEAD, the spec_hash of its spec files). Never edit a line by hand: pin from a real checkout (scripts/pinned-lib.py hash).
+# Every library of this family pins vbm-json to the same revision (lake takes the root's requirement; a diamond needs one agreed rev).
+# NAME REV SPEC_HASH ROOT SPEC_PATHS
+vbm-json 320e4f8fd16330e97282baa75efea256547c357d 7517b9ae7f9792c64e71716085730c75aeb16c7fc6a47018b6bb52d37e9067e6 LeanJson LeanJson/,LeanJson.lean,LeanJsonProofs/Ledger.lean,lakefile.lean,lake-manifest.json,lean-toolchain

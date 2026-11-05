@@ -1,0 +1,17 @@
+# What a consumer can delete: the consumption note
+
+For a verified agent harness that talks to LLM providers today with hand-written decoders. Each slice of this library lets such a harness delete a named piece of its own provider code and call a proved one. The harness keeps what is policy (what to do with a reply) and the transport; it deletes what is wire contract.
+Pin the library the way the harness pins any outside library (a lock line with the revision and the hash of the spec files, `scripts/pinned-lib.py hash` writes it), after `vbm-json` is pinned to the same revision.
+
+| slice | status | the harness function it replaces | what changes in the harness |
+|---|---|---|---|
+| scaffold | landed | none | the repository, gates and pins exist |
+| **OpenAI response decode** (`VbmLlm.OpenAI.decode`) | landed | the reader of one non-streaming reply: choice 0, its `message`, `content`, `tool_calls` (id, name, arguments), the `finish_reason`, the served `model` | one call after the parse (`LeanJson.parseFast`, then `decode`) replaces the string-keyed reads. **Differences to port deliberately:** a malformed tool call is now a typed refusal (it was silently dropped); a missing `arguments` is a refusal (the old reader defaulted it to `{}`): normalizing an empty argument string to `{}` stays the harness's policy; an empty reply (no text, no calls) is still the harness's to reject: the decoder returns it |
+| **usage accounting** (`VbmLlm.OpenAI.Usage.tokens`, `Tokens.add`) | landed | the usage reader that picks `prompt_tokens` and `cached_tokens` out of the parsed reply, and the totals | `Usage.tokens` gives fresh, cached and output counts with the arithmetic proved; **differences:** a non-natural count is refused (it read as 0), a cached count above the prompt is refused (it was not checked); weighing cached against fresh tokens stays the harness's policy |
+| **finish reason** (`VbmLlm.FinishClass.ofOpenAI`) | landed | the finish-reason reader (`length` means cut off) | a total map onto `complete / truncated / callsPending / filtered / unknown`; the provider's text stays in the choice |
+| streaming fold | planned | the stream normalizer: the server-sent-event line loop, the delta fold, index-keyed tool-call merge, usage in the last frame | one fold over events replaces the line loop and the fold; a stream with no terminal event becomes a typed `Truncated` (it was accepted silently); an `error` chunk's precedence over content already received becomes a parameter of the call (it was a fixed choice) |
+| tool-call turn machine | planned | the renderer that stores a turn with tool calls and renders the next request's messages: every call answered exactly once, orphan results as text, a placeholder for an unanswered call, a stable rendered prefix | the proved pairing replaces the provider-shaped message builders; the harness keeps its own envelope for storing a turn |
+| request codec | planned | the request builder (`messages`, `tools`, `tool_choice`, `stream`, `stream_options`) | encode and decode round trip proved |
+| Anthropic adapter | planned | none today (a new provider convention) | one user message of tool results, named-event stream, `input_tokens` excluding the cache, all behind the same neutral records |
+
+What the library will never delete from a harness: model names and routing, prices and budgets, retry and failover, authentication and token refresh, the transport and its timeouts, what to do when a call fails.

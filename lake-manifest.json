@@ -1,0 +1,16 @@
+{"version": "1.3.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"url": "https://github.com/witt3rd/vbm-json.git",
+   "type": "git",
+   "subDir": null,
+   "scope": "",
+   "rev": "320e4f8fd16330e97282baa75efea256547c357d",
+   "name": "«vbm-json»",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "320e4f8fd16330e97282baa75efea256547c357d",
+   "inherited": false,
+   "configFile": "lakefile.lean"}],
+ "name": "«vbm-llm»",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

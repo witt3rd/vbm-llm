@@ -1,0 +1,33 @@
+# The clause index: the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
+# Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
+# `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
+# The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
+# that a proved or partial claim tags (a coverage of traceability, never a statement that the clause was stated faithfully).
+openai-chat CreateChatCompletionResponse.id policy string; read when present, not required (compatible servers omit it)
+openai-chat CreateChatCompletionResponse.model policy string, an opaque name; read when present, not required
+openai-chat CreateChatCompletionResponse.choices policy array of choices (the schema requires the array; the library also requires it to be non-empty: there is nothing to read in none)
+openai-chat CreateChatCompletionResponse.usage read CompletionUsage; absent or null is no report
+openai-chat CreateChatCompletionResponse.choices.index policy integer; read when present, not required
+openai-chat CreateChatCompletionResponse.choices.message read the assistant message; required
+openai-chat CreateChatCompletionResponse.choices.finish_reason policy kept as the provider's text (stop, length, tool_calls, content_filter, function_call listed by the schema; any other word is kept and classed unknown); null or absent is none
+openai-chat ChatCompletionResponseMessage.content read string or null
+openai-chat ChatCompletionResponseMessage.refusal read string or null
+openai-chat ChatCompletionResponseMessage.tool_calls read array of tool calls; absent or null is none
+openai-chat ChatCompletionMessageToolCall.id read string; required
+openai-chat ChatCompletionMessageToolCall.type policy the schema lists only `function`: absent or `function` is read, any other word is refused as unsupported
+openai-chat ChatCompletionMessageToolCall.function.name read string; required
+openai-chat ChatCompletionMessageToolCall.function.arguments read string, kept verbatim: JSON text the model may have got wrong, never parsed here
+openai-chat CompletionUsage.prompt_tokens read natural; includes the cached tokens
+openai-chat CompletionUsage.completion_tokens read natural; includes the reasoning tokens
+openai-chat CompletionUsage.total_tokens read natural
+openai-chat CompletionUsage.prompt_tokens_details.cached_tokens read natural, a part of prompt_tokens
+openai-chat CompletionUsage.completion_tokens_details.reasoning_tokens read natural, a part of completion_tokens
+openai-chat CreateChatCompletionResponse.created ignored integer timestamp
+openai-chat CreateChatCompletionResponse.object ignored the constant chat.completion
+openai-chat CreateChatCompletionResponse.service_tier ignored
+openai-chat CreateChatCompletionResponse.system_fingerprint ignored
+openai-chat CreateChatCompletionResponse.choices.logprobs ignored
+openai-chat ChatCompletionResponseMessage.role ignored the constant assistant
+openai-chat ChatCompletionResponseMessage.annotations ignored
+openai-chat ChatCompletionResponseMessage.function_call ignored deprecated, replaced by tool_calls
+openai-chat ChatCompletionResponseMessage.audio ignored

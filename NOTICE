@@ -1,0 +1,18 @@
+vbm-llm
+Copyright 2026 the vbm-llm authors.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material used by this repository:
+
+* vbm-json (https://github.com/witt3rd/vbm-json), Apache License 2.0, the verified JSON codec this library reads its input through. It is not copied into this repository:
+  lake fetches it at the revision pinned in lakefile.lean and scripts/pinned-libs.lock.
+
+* vbm-land (https://github.com/witt3rd/vbm-land), Apache License 2.0, the landing tool, vendored unchanged at a pinned release in scripts/land/ (scripts/land/PIN).
+
+* Lean 4 (https://github.com/leanprover/lean4), Apache License 2.0,
+  Copyright (c) Microsoft Corporation, Lean FRO LLC and the Lean contributors.
+  The Lean toolchain is not part of this repository: it is downloaded at build time (mise.toml).
+
+* Examples from the OpenAI OpenAPI description (https://github.com/openai/openai-openapi, MIT License, Copyright (c) OpenAI): the four chat-completion replies vectors/openai-chat/001 to 004 are
+  the response examples of that document, unchanged; the pinned document is identified by hash in docs/schemas/openai-chat.md.

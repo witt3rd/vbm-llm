@@ -1,0 +1,60 @@
+# The protected set (the single list scripts/protected-set.sh reads): the specification, the claims, the gates and their baselines, the pins and the governance surface. A change that touches an entry
+# is allowed to land, and every gate must pass (scripts/land.d/post-rebase prints it); a change to a gate-defining file is judged by the relabel-attack suite (scripts/land.d/post-tier1).
+# One entry per line. A trailing "/" is a directory (everything under it); anything else is exactly one path. "#" starts a comment.
+# A leading "?" marks a path that is protected but may not exist in every tree yet; drop the "?" once it has landed.
+# This file and the gate that reads it are listed below: weakening the list is itself a protected change.
+# The specification: the library's code IS its specification (one Lean core), so VbmLlm/ is locked; the claims (the ledger) and the clause index too.
+VbmLlm/
+VbmLlm.lean
+VbmLlmProofs/Ledger.lean
+docs/clause-index.txt
+docs/trust-ledger.md
+docs/decisions/
+lean-toolchain
+mise.toml
+lakefile.lean
+lake-manifest.json
+AGENTS.md
+CODEOWNERS
+scorecard.toml
+.github/workflows/
+# The gates and their baselines
+scripts/tier1.sh
+scripts/tier2.sh
+scripts/LedgerGate.lean
+scripts/AxiomGate.lean
+scripts/trust-ledger-check.sh
+scripts/trust_ledger.py
+scripts/ledger-baseline.txt
+scripts/lint-pipefail.sh
+scripts/lint-proof-eval.sh
+scripts/proof-eval-allow.txt
+scripts/lint-public
+scripts/public-banned-hashes.txt
+scripts/test_lint_public.sh
+scripts/protected-paths.txt
+scripts/protected-set.sh
+scripts/test_protected_set.sh
+scripts/land-direct
+scripts/land.conf
+scripts/land.d/
+scripts/land/
+.agents/skills/
+scripts/gate-diff-improving.sh
+scripts/test_gate_diff_improving.sh
+scripts/relabel-attacks.sh
+scripts/test_relabel_attacks.sh
+scripts/attacks/
+scripts/git-hermetic.sh
+scripts/lib-no-crash-record.sh
+scripts/test_no_crash_record.sh
+scripts/regen-baselines.sh
+scripts/generated-paths.txt
+scripts/run-tests-parallel.sh
+scripts/test_run_parallel.sh
+scripts/lint-workflows.py
+scripts/test_lint_workflows.sh
+# The pinned libraries: the lock that decides which outside code is the library we depend on, the tool that checks it and its test
+scripts/pinned-libs.lock
+scripts/pinned-lib.py
+scripts/test_pinned_lib.sh

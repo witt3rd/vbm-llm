@@ -1,0 +1,5 @@
+# Files every landing may rewrite because a gate measures them (the ledger baseline) or renders them (docs). One path per line, "#" starts a comment.
+# scripts/land-direct: when rebasing commits onto main conflicts ONLY in these files, it takes main's version and regenerates them with
+# scripts/regen-baselines.sh (the ledger gate's own --write: improvements only). A conflict in any other file stops the landing.
+scripts/ledger-baseline.txt
+docs/proof-ledger.md

@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Public-readiness lint (AGENTS.md): the whole tree (tracked and untracked-not-ignored files, and their paths) must carry no private name, no path of ours and no retired project name (kept as hashes below; the live name is the product name and may appear anywhere).
+  scripts/lint-public [--root DIR]     exit 0 clean; exit 1 prints each finding as path:line: reason
+The private names are kept as sha256 hashes of lowercase tokens in scripts/public-banned-hashes.txt, so this repository does not itself spell them (`--hash WORD` prints a hash to add). A token is a run of
+[a-z0-9]; matching is case-insensitive. Path patterns (a home directory, a mount, a tilde path) are plain regexes below. LINT_PUBLIC_EXTRA_HASHES adds hashes (self-test only)."""
+import hashlib, os, re, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PATHS = [(re.compile(r"(?:^|[\s\"'`(=])(?:/home/|/mnt/|/Users/|~/)"), "a path of ours")]
+TOKEN = re.compile(r"[a-z0-9]+")
+EXEMPT = {"scripts/public-banned-hashes.txt"}          # the hash list
+
+
+RETIRED = {"705db0603fd5431451dab1171b964b4bd575e2230f40f4c300d70df6e65f5f1c"}  # sha256 of the retired project name token
+
+
+def h(w): return hashlib.sha256(w.encode()).hexdigest()
+
+
+def load():
+    banned = set()
+    for l in open(os.path.join(HERE, "public-banned-hashes.txt")):
+        l = l.split("#")[0].split()
+        if len(l) == 2 and l[0] == "banned": banned.add(l[1])
+        elif l: raise SystemExit(f"lint-public: bad line in public-banned-hashes.txt: {l}")
+    banned |= {x for x in os.environ.get("LINT_PUBLIC_EXTRA_HASHES", "").split(",") if x}
+    return banned
+
+
+def scan(root):
+    banned = load()
+    if len(banned) < 8: raise SystemExit("lint-public: the hash list is missing or too small to be a gate")
+    retired = {x for x in os.environ.get("LINT_PUBLIC_EXTRA_RETIRED", "").split(",") if x} | set(RETIRED)
+    files = subprocess.run(["git", "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"], capture_output=True, text=True, check=True).stdout.split("\0")
+    bad = []
+    for f in sorted(set(x for x in files if x and x not in EXEMPT and os.path.isfile(os.path.join(root, x)) and not os.path.islink(os.path.join(root, x)))):
+        def check(text, where):
+            for t in TOKEN.findall(text.lower()):
+                if h(t) in banned: bad.append(f"{where}: a private name ({h(t)[:8]})")
+            for t in TOKEN.findall(text.lower()):
+                if h(t) in retired: bad.append(f"{where}: a retired project name")
+            for rx, why in PATHS:
+                if rx.search(text): bad.append(f"{where}: {why}")
+        check(f, f"{f}:path")
+        try: lines = open(os.path.join(root, f), encoding="utf-8").read().split("\n")
+        except (UnicodeDecodeError, OSError): continue
+        for n, line in enumerate(lines, 1): check(line, f"{f}:{n}")
+    return bad
+
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if a[:1] == ["--hash"]: print(h(a[1].lower())); sys.exit(0)
+    bad = scan(os.path.abspath(a[1]) if a[:1] == ["--root"] else os.path.dirname(HERE))
+    print("\n".join(bad)); sys.exit(1 if bad else 0)

@@ -1,0 +1,105 @@
+# Adapter for the VBM scorecard (the schema is ADAPTER in the scorecard's runner; every key is required). Written for the first slice of vbm-llm: a pure-spec library with no trusted C, no ABI and no freestanding build yet,
+# so the bare-metal and bench tables name what exists today and the metrics that need more are expected to be `not-measurable` on the card, with a dated plan in docs/decisions/0001-vbm-llm.md.
+[subject]
+name = "vbm-llm"
+kind = "library"
+
+[source]
+# Lean sources of ours: the spec+code library, the proofs, the vector checker. Not scripts/*.lean (the gates name the forbidden words by design).
+globs = ["VbmLlm.lean", "VbmLlm/**/*.lean", "VbmLlmProofs.lean", "VbmLlmProofs/**/*.lean", "vectors/Main.lean"]
+
+[trust]
+# our trusted C: none; the ledger lists everything else
+c_files = []
+ledger = "docs/trust-ledger.md"
+entry_regex = "^### T[0-9]"
+
+[tests]
+# the conformance vectors are recorded replies and refusals with the library's reviewed rendering: boundary evidence, not tests
+generated = ["vectors/**"]
+extra = []
+# self-tests of the gates and process scripts (counted there, not as tests of the library)
+gate_selftests = ["scripts/test_*.sh"]
+entry_points = ["decode", "VbmLlm.OpenAI.decode"]
+scenario_files = []
+
+[proof]
+sorry_pattern = '\b(sorry|admit|axiom|unsafe|implemented_by|csimp)\b'
+allow_marker = "tier1-allow"
+# the closure gate is not ported yet: no specified-share command is declared ("" = none; the card says not-measurable and the plan is in docs/decisions/0001-vbm-llm.md)
+closure_cmd = ""
+closure_regex = ""
+closure_timeout_seconds = 900
+axiom_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && lake build VbmLlm VbmLlmProofs >/dev/null 2>&1 && lake env lean --run scripts/AxiomGate.lean'
+axiom_regex = 'axiom gate: [0-9]+ constants checked, ([0-9]+) offending'
+axiom_timeout_seconds = 900
+
+[mutation]
+# no code mutation yet: the library has no emitted C or shim to mutate; the generated-code metric needs an export (a later slice)
+comment = "--"
+files = []
+setup_cmd = ""
+kill_cmd = ""
+mutants = 0
+seed = 1
+kill_timeout_seconds = 60
+timeout_seconds = 60
+
+[nonvacuity]
+# specification mutants (operator swaps in the decoders, each must break a proof): not declared yet; planned with the scorecard's reader for this library
+comment = "--"
+files = []
+setup_cmd = ""
+kill_cmd = ""
+mutants = 0
+seed = 1
+kill_timeout_seconds = 60
+timeout_seconds = 60
+
+[bench]
+# throughput against comparators: none declared (the library is a codec of small replies; no comparator exists for a typed reply decoder)
+cmd = ""
+comparators = []
+timeout_seconds = 60
+
+[bare_metal]
+# no freestanding artifact yet (no export): the metrics are not-measurable until the first export
+build_cmd = ""
+symbols_cmd = ""
+allowed_symbols = []
+wasm_cmd = ""
+wasm_bytes_regex = ""
+timeout_seconds = 60
+
+[tier1]
+command = '''cp -a /subject /tmp/w && cd /tmp/w && scripts/tier1.sh'''
+timeout_seconds = 1800
+script = "scripts/tier1.sh"
+attack_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean'
+attack_sabotage_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean --sabotage'
+attack_timeout_seconds = 1800
+gates = [
+  { name = "forbidden-constructs scan", selftest = "forbidden-constructs scan: negative self-tests ok" },
+  { name = "import scan", selftest = "import scan: negative self-tests ok" },
+  { name = "pipefail lint", selftest = "lint-pipefail: ok" },
+  { name = "proof-evaluation lint", selftest = "lint-proof-eval: self-test ok" },
+  { name = "zero-warning build", selftest = "zero-warning build: negative self-test ok" },
+  { name = "axiom gate", selftest = "axiom gate: negative self-test ok" },
+  { name = "obligation ledger gate", selftest = "ledger gate: negative self-tests ok" },
+  { name = "trust ledger", selftest = "trust ledger: .* [0-9]+ negative self-tests ok" },
+  { name = "conformance vectors", selftest = "the check rejects tampered rows" },
+  { name = "pinned library", selftest = "^ok +scripts/test_pinned_lib\\.sh" },
+  { name = "public-readiness lint", selftest = "^ok +scripts/test_lint_public\\.sh" },
+  { name = "workflow lint", selftest = "^ok +scripts/test_lint_workflows\\.sh" },
+  { name = "protected-set gate", selftest = "^ok +scripts/test_protected_set\\.sh" },
+  { name = "parallel test runner", selftest = "^ok +scripts/test_run_parallel\\.sh" },
+  { name = "crash-record check", selftest = "^ok +scripts/test_no_crash_record\\.sh" },
+  { name = "gate-diff judge", selftest = "^ok +scripts/test_gate_diff_improving\\.sh" },
+  { name = "relabel-attack suite", selftest = "^ok +scripts/test_relabel_attacks\\.sh" },
+]
+
+[velocity]
+window_hours = 168
+
+[floors]
+specified_share = 100

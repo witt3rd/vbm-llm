@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# A new scratch worktree starts with a copy of the primary worktree's build (.lake): the first landing is not a cold build (lake is incremental after that).
+set -euo pipefail
+if [ -d "$LAND_TOP/.lake" ]; then cp -a --reflink=auto "$LAND_TOP/.lake" .lake; fi
