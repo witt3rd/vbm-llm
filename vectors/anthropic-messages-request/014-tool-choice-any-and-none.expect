@@ -1,0 +1,2 @@
+ok
+{"model":"m","max_tokens":512,"messages":[{"role":"user","content":[{"type":"text","text":"go"}]}],"tool_choice":{"type":"none"}}

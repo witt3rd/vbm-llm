@@ -1,0 +1,2 @@
+ok
+{"model":"m","max_tokens":1024,"messages":[{"role":"user","content":[{"type":"text","text":"Hello there."}]},{"role":"assistant","content":[{"type":"text","text":"Hi, I'm Claude. How can I help you?"}]},{"role":"user","content":[{"type":"text","text":"Can you explain LLMs in plain English?"}]}]}

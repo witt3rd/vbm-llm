@@ -9,6 +9,7 @@ import VbmLlmProofs.Error
 import VbmLlmProofs.OpenRouter
 import VbmLlmProofs.Anthropic.Response
 import VbmLlmProofs.Anthropic.Request
+import VbmLlmProofs.Anthropic.RequestDecode
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -144,7 +145,21 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.Anthropic.encode_members_not_null, ``VbmLlm.Anthropic.encodeBlock_toolResult]),
   O "anthropic-request-max-tokens-is-required-and-a-plain-natural" ["anthropic-messages:MessageCreateParams.max_tokens"] (.proved [``VbmLlm.Anthropic.encode_max_tokens_natural]),
   O "anthropic-request-a-tool-call-is-written-with-its-input-as-an-object" ["anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id"] (.proved [``VbmLlm.Anthropic.encodeBlock_toolUse]),
-  O "anthropic-messages-adapter" [] (.open_ "the request codec (system at the top level, content blocks, one user message of tool results, max_tokens required), the named-event stream fold, and the turn shape over `pair` (the reply decoder, usage and stop reasons have landed above)"),
+  -- the Anthropic messages request: the decoder, and the round trip
+  O "anthropic-request-codec-round-trip" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.tool_choice", "anthropic-messages:MessageCreateParams.stream", "anthropic-messages:MessageCreateParams.temperature", "anthropic-messages:MessageCreateParams.top_p", "anthropic-messages:MessageCreateParams.top_k", "anthropic-messages:MessageCreateParams.stop_sequences",
+      "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content", "anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id",
+      "anthropic-messages:ToolResultBlockParam.content", "anthropic-messages:ToolResultBlockParam.is_error", "anthropic-messages:Tool.name", "anthropic-messages:Tool.description",
+      "anthropic-messages:Tool.input_schema", "anthropic-messages:Tool.strict"]
+    (.proved [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.decodeReqBlock_encodeBlock, ``VbmLlm.Anthropic.decodeMsg_encodeMessage, ``VbmLlm.Anthropic.decodeToolDecl_encodeTool,
+      ``VbmLlm.Anthropic.decodeMsgs_encode, ``VbmLlm.Anthropic.decodeToolDecls_encode, ``VbmLlm.Anthropic.decodeToolPick_encode, ``VbmLlm.Anthropic.decodeStops_encode,
+      ``VbmLlm.Anthropic.optStr_orNull, ``VbmLlm.Anthropic.reqNat_natNumber]),
+  O "anthropic-request-what-decodes-is-written-back-the-same" ["anthropic-messages:MessageCreateParams.messages"]
+    (.proved [``VbmLlm.Anthropic.decode_ok_stable, ``VbmLlm.Anthropic.decodeMsgs_ne_nil]),
+  O "anthropic-request-decode-fails-closed" ["anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.tool_choice",
+      "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content"]
+    (.proved [``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.reqNat_missing, ``VbmLlm.Anthropic.decodeMsgs_none, ``VbmLlm.Anthropic.decodeMsgs_empty, ``VbmLlm.Anthropic.decodeMsgs_not_array,
+      ``VbmLlm.Anthropic.decodeMsg_unsupported_role, ``VbmLlm.Anthropic.decodeReqBlock_unsupported_type, ``VbmLlm.Anthropic.decodeToolPick_unsupported]),
+  O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold and the turn shape over `pair` (the reply decoder, usage, stop reasons and the request codec with its round trip have landed above)"),
   -- OpenRouter's variant of the chat profile
   O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
   O "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]

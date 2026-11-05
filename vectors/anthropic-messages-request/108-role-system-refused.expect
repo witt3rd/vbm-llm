@@ -1,0 +1,2 @@
+error
+reply.messages[0].role has an unsupported value "system"

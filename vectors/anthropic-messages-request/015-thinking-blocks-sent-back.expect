@@ -1,0 +1,2 @@
+ok
+{"model":"m","max_tokens":2048,"messages":[{"role":"user","content":[{"type":"text","text":"q"}]},{"role":"assistant","content":[{"type":"thinking","thinking":"hmm","signature":"sig=="},{"type":"redacted_thinking","data":"opaque"},{"type":"text","text":"a"}]},{"role":"user","content":[{"type":"text","text":"more"}]}]}

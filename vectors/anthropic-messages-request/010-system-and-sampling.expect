@@ -1,0 +1,2 @@
+ok
+{"model":"m","max_tokens":256,"messages":[{"role":"user","content":[{"type":"text","text":"hi"}]}],"system":"Be brief.","stream":true,"temperature":0.5,"top_p":0.9,"top_k":40,"stop_sequences":["END","STOP"]}

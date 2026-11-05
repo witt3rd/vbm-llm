@@ -1,0 +1,1 @@
+{"model":"m","max_tokens":1,"stop_sequences":["a",2],"messages":[{"role":"user","content":"x"}]}

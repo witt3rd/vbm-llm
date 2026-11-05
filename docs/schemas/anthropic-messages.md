@@ -7,7 +7,7 @@ The convention is published as TypeScript type definitions in the vendor's SDK; 
 | source | `https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/08e2e5ffa7566e893d5be64f0e74a6658f7ee422/src/resources/messages/messages.ts` (the file at that commit of the SDK repository, committed 2026-11-04) |
 | fetched | 2026-11-05, read only |
 | sha256 of the document | `6f9d6f3421bcddceb423a7990c3c18bd1bc2b9deb62590245f85539511e1b6a5` (251,058 bytes) |
-| components read | `Message`, `ContentBlock` (`TextBlock`, `ThinkingBlock`, `RedactedThinkingBlock`, `ToolUseBlock`; the other members are kept raw), `StopReason`, `Usage` |
+| components read | `Message`, `ContentBlock` (`TextBlock`, `ThinkingBlock`, `RedactedThinkingBlock`, `ToolUseBlock`; the other members are kept raw), `StopReason`, `Usage`; for the request: `MessageCreateParamsBase`, `MessageParam`, `ContentBlockParam` (`TextBlockParam`, `ThinkingBlockParam`, `RedactedThinkingBlockParam`, `ToolUseBlockParam`, `ToolResultBlockParam`; the other members are refused), `Tool`, `ToolChoice` |
 
 The clause index (`clause-index.txt`) lists the properties read, decided by policy or ignored, under the convention name `anthropic-messages`. Fetching the file at another commit and finding another hash is a **schema bump**: read the diff of the components above, update the index and the decoder, then change this table; nothing else may move the pin.
 
@@ -21,3 +21,13 @@ The clause index (`clause-index.txt`) lists the properties read, decided by poli
 ## Provenance of the vectors
 
 `vectors/anthropic-messages/001` to `014` and `100` to `120` are built here from the shape the type definitions give (the text example in the `Message.content` comment, `Hi, I'm Claude.`, is `001`); none is a recorded reply of the service.
+
+## What the document says that the request codec relies on
+
+* `MessageCreateParamsBase` requires `max_tokens`, `messages` and `model`; `system` (a string or an array of text blocks), `tools`, `tool_choice`, `stream`, `temperature`, `top_p`, `top_k` and `stop_sequences` are optional. The encoder writes an absent field **left out**, never as `null`; the system prompt is a member of the request, not a message.
+* A `MessageParam` is a `role` (`user` or `assistant`) and a `content` that is a string or an array of blocks; the encoder always writes the array form, the decoder reads a bare string as one text block. A tool call is a `ToolUseBlockParam` (`id`, `name`, `input`: here an object) in an assistant message, its answer a `ToolResultBlockParam` (`tool_use_id`, `content`, `is_error`) in the next user message. Content is modelled as text only: an image, a document or a server-tool block, the array form of a result's `content` and the array form of `system` are refused, never dropped.
+* A `Tool` is `{name, description?, input_schema, strict?}` (the schema's server-tool variants have no `input_schema` and are refused); a `ToolChoice` is `auto`, `any`, `none` or `tool` (with its `name`); all but `none` carry an optional `disable_parallel_tool_use`.
+* The numbers `temperature` and `top_p` are kept as number lexemes; their ranges are the provider's to enforce.
+
+`vectors/anthropic-messages-request/001` and `002` carry, as the value of `messages`, the documented examples of that field (`Hello, Claude`; the three conversational turns), `003` the documented block form; the rest are built here from the shapes (the field list above) and each refusal.
+

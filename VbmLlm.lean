@@ -11,6 +11,7 @@ import VbmLlm.Error
 import VbmLlm.OpenRouter.ApiError
 import VbmLlm.Anthropic.Response
 import VbmLlm.Anthropic.Request
+import VbmLlm.Anthropic.RequestDecode
 import VbmLlm.OpenAI.ApiError
 import VbmLlm.Turn
 import VbmLlm.OpenAI.Turn

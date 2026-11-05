@@ -1,0 +1,1 @@
+{"model":"m","max_tokens":1,"tool_choice":{"type":"sometimes"},"messages":[{"role":"user","content":"x"}]}
