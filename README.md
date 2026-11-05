@@ -58,4 +58,4 @@ Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Security reports: [SECU
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule. While the repository is private it runs on the owner's self-hosted runner; a public repository must never run on one, so `scripts/lint-workflows.py` fails Tier 1 on a `self-hosted` runner unless `.github/visibility` says `private`. The switch to GitHub-hosted runners is part of publishing (`docs/going-public.md`); no workflow reads a secret.
+`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule, on GitHub-hosted runners only (`scripts/lint-workflows.py` fails Tier 1 on a `self-hosted` runner unless `.github/visibility` says `private`, and on a `pull_request_target` trigger or any secret). No workflow reads a secret. What was checked before the repository went public, and the settings applied, are in `docs/flip-record.md`.
