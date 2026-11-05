@@ -1,0 +1,3 @@
+class rateLimit
+error
+reply.error.code is not a string

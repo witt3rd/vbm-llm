@@ -1,0 +1,1 @@
+{"status": 403, "context_words": false, "body": {"error": {"message": "Country, region, or territory not supported", "type": "invalid_request_error", "param": null, "code": "unsupported_country_region_territory"}}}

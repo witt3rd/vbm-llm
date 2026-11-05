@@ -1,0 +1,2 @@
+class rateLimit
+ok message="Rate limit reached for requests" type="requests" param=none code="rate_limit_exceeded"

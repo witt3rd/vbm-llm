@@ -1,0 +1,2 @@
+class overloaded
+ok message="The engine is currently overloaded" type="server_error" param=none code=none

@@ -124,6 +124,21 @@ def renderTurnFile (p : FilePath) : IO String := do
       return "ok\n" ++ bad ++ String.fromUTF8! (ByteArray.mk (LeanJson.print (.arr (msgs.map encodeMessage))).toArray) ++ "\n"
   | .ok _ => return "error\nnot a list of recorded items\n"
 
+/- An error vector is `{"status": N, "context_words": bool, "body": <the body of the failed call>}`: the class `ErrorClass.ofStatus` gives and the fields of the body. -/
+open VbmLlm VbmLlm.OpenAI in
+def errorFile (p : FilePath) : IO String := do
+  let bytes ← IO.FS.readBinFile p
+  match LeanJson.parseFast bytes with
+  | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
+  | .ok w =>
+    match nat? (get w "status"), get w "context_words" with
+    | some n, .bool words =>
+      let cls := (ErrorClass.ofStatus n words).name
+      match decodeApiError (get w "body") with
+      | .error f => return s!"class {cls}\nerror\n{f.render}\n"
+      | .ok e => return s!"class {cls}\nok message={e.message.quote} type={optS e.type} param={optS e.param} code={optS e.code}\n"
+    | _, _ => return "error\nnot a status and a context_words flag\n"
+
 def foldFile (p : FilePath) : IO String := do
   let text ← IO.FS.readFile p
   return VbmLlm.OpenAI.renderOutcome (VbmLlm.OpenAI.foldEvents {} parseData (splitEvents text))
@@ -142,16 +157,18 @@ def main (args : List String) : IO UInt32 := do
   let ss ← listDir (dir / "openai-chat-stream") "sse"
   let rs ← listDir (dir / "openai-chat-request") "json"
   let ts ← listDir (dir / "openai-chat-turn") "json"
-  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
+  let es ← listDir (dir / "openai-chat-error") "json"
+  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
   if args.contains "--write" then
     for p in js do IO.FS.writeFile (p.withExtension "expect") (← decodeFile p)
     for p in ss do IO.FS.writeFile (p.withExtension "expect") (← foldFile p)
     for p in rs do IO.FS.writeFile (p.withExtension "expect") (← decodeRequestFile p)
     for p in ts do IO.FS.writeFile (p.withExtension "expect") (← renderTurnFile p)
-    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size} expectations"; return 0
+    for p in es do IO.FS.writeFile (p.withExtension "expect") (← errorFile p)
+    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size} expectations"; return 0
   let mut bad := 0
-  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) do
-    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else renderTurnFile p
+  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) do
+    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else errorFile p
     let ep := p.withExtension "expect"
     if !(← ep.pathExists) then IO.eprintln s!"vbm-llm-vectors: {p}: no expectation"; bad := bad + 1; continue
     if got != (← IO.FS.readFile ep) then IO.eprintln s!"vbm-llm-vectors: {p}: the result differs from {ep}\n{got}"; bad := bad + 1
@@ -164,7 +181,7 @@ def main (args : List String) : IO UInt32 := do
         -- both render `ok`/`complete` then the same reply lines
         if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
           IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
-  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests and {ts.size} turn records, {bad} differ"
+  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records and {es.size} failed calls, {bad} differ"
   if args.contains "--selftest" then
     let p := js[0]!
     let want ← IO.FS.readFile (p.withExtension "expect")
@@ -191,5 +208,12 @@ def main (args : List String) : IO UInt32 := do
     let tp := ts[0]!
     let twant ← IO.FS.readFile (tp.withExtension "expect")
     if (twant ++ "x") == (← renderTurnFile tp) then IO.eprintln "vbm-llm-vectors: the turn check cannot fail"; return 1
-    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn"
+    -- a failed call: a tampered class is rejected, and the same message is a context overflow only on the consumer's word
+    let ep := es[0]!
+    let ewant ← IO.FS.readFile (ep.withExtension "expect")
+    if (ewant ++ "x") == (← errorFile ep) || !ewant.startsWith "class auth\n" then IO.eprintln "vbm-llm-vectors: the error check cannot fail (or the first failed call is not read)"; return 1
+    let ow ← errorFile (dir / "openai-chat-error" / "009-context-overflow-by-words.json")
+    let on ← errorFile (dir / "openai-chat-error" / "010-same-message-no-words.json")
+    if !ow.startsWith "class overflow\n" || on.startsWith "class overflow\n" then IO.eprintln "vbm-llm-vectors: an overflow is not told by the consumer's words"; return 1
+    IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn and a tampered failed call"
   return if bad == 0 then 0 else 1

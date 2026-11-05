@@ -5,4 +5,5 @@ import VbmLlmProofs.OpenAI.Response
 import VbmLlmProofs.OpenAI.Stream
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
+import VbmLlmProofs.Error
 import VbmLlmProofs.Ledger

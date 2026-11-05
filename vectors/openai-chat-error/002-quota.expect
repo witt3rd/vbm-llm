@@ -1,0 +1,2 @@
+class quota
+ok message="You exceeded your current quota." type="insufficient_quota" param=none code="insufficient_quota"

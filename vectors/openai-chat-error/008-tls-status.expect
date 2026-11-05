@@ -1,0 +1,2 @@
+class invalid
+ok message="SSL handshake failed" type="server_error" param=none code=none

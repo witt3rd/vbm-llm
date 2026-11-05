@@ -1,0 +1,2 @@
+class auth
+ok message="Incorrect API key provided: sk-***." type="invalid_request_error" param=none code="invalid_api_key"

@@ -1,6 +1,6 @@
 # 0001. vbm-llm: the wire contract, proved, and nothing else
 
-Status: accepted for the scaffold and the first slices (the OpenAI chat-completions response decoder, the stream fold, the request codec, the tool-call turn machine). The policies in section 4 are the working assumption; each is a claim in the ledger.
+Status: accepted for the scaffold and the first slices (the OpenAI chat-completions response decoder, the stream fold, the request codec, the tool-call turn machine, the error taxonomy). The policies in section 4 are the working assumption; each is a claim in the ledger.
 
 ## 1. Decision
 

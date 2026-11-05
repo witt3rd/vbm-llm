@@ -1,0 +1,2 @@
+class auth
+ok message="Country, region, or territory not supported" type="invalid_request_error" param=none code="unsupported_country_region_territory"

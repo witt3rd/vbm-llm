@@ -5,6 +5,7 @@ import VbmLlmProofs.OpenAI.Response
 import VbmLlmProofs.OpenAI.Stream
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
+import VbmLlmProofs.Error
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -60,6 +61,12 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.OpenAI.openai_cached_exceeds_refused, ``VbmLlm.OpenAI.openai_reasoning_exceeds_refused]),
   O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
+  -- the error taxonomy and the body of a failed call
+  O "error-the-status-of-a-failed-call-has-a-class" ["openai-chat-status:auth", "openai-chat-status:quota", "openai-chat-status:timeout", "openai-chat-status:rate-limit", "openai-chat-status:server"]
+    (.proved [``VbmLlm.ErrorClass.ofStatus_auth, ``VbmLlm.ErrorClass.ofStatus_quota, ``VbmLlm.ErrorClass.ofStatus_timeout, ``VbmLlm.ErrorClass.ofStatus_rateLimit, ``VbmLlm.ErrorClass.ofStatus_tls, ``VbmLlm.ErrorClass.ofStatus_server]),
+  O "error-an-overflow-is-a-client-error-the-consumer-reads-so" ["openai-chat-status:overflow"] (.proved [``VbmLlm.ErrorClass.ofStatus_overflow_iff, ``VbmLlm.ErrorClass.ofStatus_no_words]),
+  O "openai-error-body-is-read-as-the-schema-says-and-never-coerced" ["openai-chat:ErrorResponse.error", "openai-chat:Error.message", "openai-chat:Error.type", "openai-chat:Error.param", "openai-chat:Error.code"]
+    (.proved [``VbmLlm.decodeApiError_ok_iff, ``VbmLlm.decodeApiError_not_object, ``VbmLlm.decodeApiError_no_error, ``VbmLlm.decodeApiError_no_message, ``VbmLlm.decodeApiError_code_wrong]),
   -- not yet built (open) and not decidable by a machine (limit)
   -- the OpenAI chat-completions request: encoder, decoder, round trip
   O "openai-request-members-are-the-fields" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.parallel_tool_calls", "openai-chat:CreateChatCompletionRequest.stream", "openai-chat:ChatCompletionStreamOptions.include_usage",
