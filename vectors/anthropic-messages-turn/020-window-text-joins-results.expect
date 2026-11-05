@@ -1,0 +1,2 @@
+ok
+[{"role":"user","content":[{"type":"text","text":"weather in Oslo?"}]},{"role":"assistant","content":[{"type":"text","text":"Checking."},{"type":"tool_use","id":"c1","name":"weather","input":{"city":"Oslo"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"c1","content":"3 C"},{"type":"text","text":"and tomorrow?"}]},{"role":"assistant","content":[{"type":"text","text":"It is 3 C."}]}]

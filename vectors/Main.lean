@@ -125,6 +125,40 @@ partial def pairedOk : List RequestMessage → Bool
     (rest.take n).length == n && ((rest.take n).zip cs).all (fun (m, c) => match m with | .tool i _ => i == c.id | _ => false) && pairedOk (rest.drop n)
   | _ :: rest => pairedOk rest
 
+open VbmLlm VbmLlm.Anthropic in
+/-- The independent pairing check of the Anthropic shape (shares no code with the library): an assistant message that makes calls is followed directly by a user message whose first blocks are the results of exactly
+those calls, in order, with their ids; and no result block appears anywhere else. -/
+partial def anthropicPairedOk : List Message → Bool
+  | [] => true
+  | m :: rest =>
+    let isRes : ReqBlock → Bool := fun b => match b with | .toolResult .. => true | _ => false
+    let calls := if m.role == .assistant then m.content.filterMap (fun b => match b with | .toolUse i _ _ => some i | _ => none) else []
+    if m.content.any isRes then false
+    else if calls.isEmpty then anthropicPairedOk rest
+    else match rest with
+      | [] => false
+      | n :: rest' =>
+        let ids := n.content.takeWhile isRes |>.filterMap (fun b => match b with | .toolResult i _ _ => some i | _ => none)
+        n.role == .user && ids == calls && !(n.content.dropWhile isRes).any isRes && anthropicPairedOk rest'
+
+open VbmLlm VbmLlm.Anthropic in
+def renderAnthropicTurnFile (p : FilePath) : IO String := do
+  let bytes ← IO.FS.readBinFile p
+  match LeanJson.parseFast bytes with
+  | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
+  | .ok (.arr xs) =>
+    match xs.mapM itemOf with
+    | none => return "error\nnot a list of recorded items\n"
+    | some items =>
+      let show1 := fun (m : Message) => String.fromUTF8! (ByteArray.mk (LeanJson.print (encodeMessage m)).toArray)
+      let msgs := Anthropic.render {} items
+      let mut bad := ""
+      if !anthropicPairedOk msgs then bad := bad ++ "NOT PAIRED\n"
+      for (it, k) in items.zipIdx do
+        if isAsst it && !(((Anthropic.render {} (items.take k)).map show1).isPrefixOf (msgs.map show1)) then bad := bad ++ s!"PREFIX UNSTABLE at {k}\n"
+      return "ok\n" ++ bad ++ String.fromUTF8! (ByteArray.mk (LeanJson.print (.arr (msgs.map encodeMessage))).toArray) ++ "\n"
+  | .ok _ => return "error\nnot a list of recorded items\n"
+
 open VbmLlm VbmLlm.OpenAI in
 def renderTurnFile (p : FilePath) : IO String := do
   let bytes ← IO.FS.readBinFile p
@@ -224,7 +258,8 @@ def main (args : List String) : IO UInt32 := do
   let ans ← listDir (dir / "anthropic-messages") "json"
   let ors ← listDir (dir / "openrouter-chat-error") "json"
   let ars ← listDir (dir / "anthropic-messages-request") "json"
-  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty || ans.isEmpty || ors.isEmpty || ars.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
+  let ats ← listDir (dir / "anthropic-messages-turn") "json"
+  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty || ans.isEmpty || ors.isEmpty || ars.isEmpty || ats.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
   if args.contains "--write" then
     for p in js do IO.FS.writeFile (p.withExtension "expect") (← decodeFile p)
     for p in ss do IO.FS.writeFile (p.withExtension "expect") (← foldFile p)
@@ -234,14 +269,15 @@ def main (args : List String) : IO UInt32 := do
     for p in ans do IO.FS.writeFile (p.withExtension "expect") (← anthropicFile p)
     for p in ors do IO.FS.writeFile (p.withExtension "expect") (← routerErrorFile p)
     for p in ars do IO.FS.writeFile (p.withExtension "expect") (← decodeAnthropicRequestFile p)
-    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size + ans.size + ors.size + ars.size} expectations"; return 0
+    for p in ats do IO.FS.writeFile (p.withExtension "expect") (← renderAnthropicTurnFile p)
+    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size + ans.size + ors.size + ars.size + ats.size} expectations"; return 0
   let mut bad := 0
-  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) ++ (ans.map (·, 5)) ++ (ors.map (·, 6)) ++ (ars.map (·, 7)) do
-    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else if kind == 4 then errorFile p else if kind == 5 then anthropicFile p else if kind == 6 then routerErrorFile p else decodeAnthropicRequestFile p
+  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) ++ (ans.map (·, 5)) ++ (ors.map (·, 6)) ++ (ars.map (·, 7)) ++ (ats.map (·, 8)) do
+    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else if kind == 4 then errorFile p else if kind == 5 then anthropicFile p else if kind == 6 then routerErrorFile p else if kind == 7 then decodeAnthropicRequestFile p else renderAnthropicTurnFile p
     let ep := p.withExtension "expect"
     if !(← ep.pathExists) then IO.eprintln s!"vbm-llm-vectors: {p}: no expectation"; bad := bad + 1; continue
     if got != (← IO.FS.readFile ep) then IO.eprintln s!"vbm-llm-vectors: {p}: the result differs from {ep}\n{got}"; bad := bad + 1
-    if kind == 3 && (got.startsWith "ok\nNOT PAIRED" || got.startsWith "ok\nPREFIX UNSTABLE") then
+    if (kind == 3 || kind == 8) && (got.startsWith "ok\nNOT PAIRED" || got.startsWith "ok\nPREFIX UNSTABLE") then
       IO.eprintln s!"vbm-llm-vectors: {p}: the rendering is not well paired or not prefix-stable\n{got}"; bad := bad + 1
     if kind == 1 then
       let twin := twinOf p
@@ -250,7 +286,7 @@ def main (args : List String) : IO UInt32 := do
         -- both render `ok`/`complete` then the same reply lines
         if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
           IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
-  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records, {es.size} failed calls and {ans.size} messages replies and {ors.size} router failed calls and {ars.size} messages requests, {bad} differ"
+  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records, {es.size} failed calls and {ans.size} messages replies and {ors.size} router failed calls and {ars.size} messages requests and {ats.size} messages turn records, {bad} differ"
   if args.contains "--selftest" then
     let p := js[0]!
     let want ← IO.FS.readFile (p.withExtension "expect")
@@ -304,5 +340,13 @@ def main (args : List String) : IO UInt32 := do
     let nomax ← decodeAnthropicRequestFile (dir / "anthropic-messages-request" / "101-no-max-tokens.json")
     let aimg ← decodeAnthropicRequestFile (dir / "anthropic-messages-request" / "109-image-block-refused.json")
     if !nomax.startsWith "error\n" || !aimg.startsWith "error\n" then IO.eprintln "vbm-llm-vectors: a request with no max_tokens, or an image block, was not refused"; return 1
+    -- Anthropic turns: the independent pairing check rejects an unanswered call, a stray result and a wrong id, and accepts a paired list; a tampered record is rejected
+    let ac : VbmLlm.Anthropic.ReqBlock := .toolUse "c1" "f" []
+    if anthropicPairedOk [⟨.assistant, [ac]⟩, ⟨.user, [.text "x"]⟩] || anthropicPairedOk [⟨.user, [.toolResult "c1" none none]⟩] || anthropicPairedOk [⟨.assistant, [ac]⟩, ⟨.user, [.toolResult "c2" none none]⟩]
+        || !anthropicPairedOk [⟨.assistant, [ac]⟩, ⟨.user, [.toolResult "c1" none none, .text "x"]⟩] then
+      IO.eprintln "vbm-llm-vectors: the Anthropic pairing check cannot fail (or rejects a paired list)"; return 1
+    let atp := ats[0]!
+    let atwant ← IO.FS.readFile (atp.withExtension "expect")
+    if (atwant ++ "x") == (← renderAnthropicTurnFile atp) || !atwant.startsWith "ok\n" then IO.eprintln "vbm-llm-vectors: the Anthropic turn check cannot fail"; return 1
     IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn, a tampered failed call, a cache miscount and a number read as a word"
   return if bad == 0 then 0 else 1

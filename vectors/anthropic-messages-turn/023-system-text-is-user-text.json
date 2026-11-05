@@ -1,0 +1,1 @@
+[{"kind": "text", "role": "system", "content": "be brief"}, {"kind": "text", "role": "user", "content": "hi"}, {"kind": "text", "role": "assistant", "content": "hello"}, {"kind": "text", "role": "assistant", "content": "again"}]

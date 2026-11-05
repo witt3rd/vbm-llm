@@ -1,0 +1,2 @@
+ok
+[{"role":"assistant","content":[{"type":"tool_use","id":"a","name":"f","input":{}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"a","content":"ra"},{"type":"text","text":"[tool result] stray"}]},{"role":"assistant","content":[{"type":"text","text":"again"},{"type":"tool_use","id":"b","name":"f","input":{"n":1}},{"type":"tool_use","id":"c","name":"f","input":{"n":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"b","content":"rb"},{"type":"tool_result","tool_use_id":"c","content":"rc"}]}]

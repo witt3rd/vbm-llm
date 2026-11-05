@@ -1,0 +1,1 @@
+[{"kind": "text", "role": "user", "content": "weather in Oslo?"}, {"kind": "turn", "content": "Checking.", "calls": [{"id": "c1", "name": "weather", "arguments": "{\"city\":\"Oslo\"}"}]}, {"kind": "result", "id": "c1", "content": "3 C"}, {"kind": "text", "role": "user", "content": "and tomorrow?"}, {"kind": "text", "role": "assistant", "content": "It is 3 C."}]
