@@ -58,3 +58,9 @@ scripts/test_lint_workflows.sh
 scripts/pinned-libs.lock
 scripts/pinned-lib.py
 scripts/test_pinned_lib.sh
+# The ran-evidence mechanism (docs/decisions/0002-ran-evidence.md): the reader, the library, the zero-warning check and the shared negative test.
+scripts/ran-evidence.sh
+scripts/lib-ran.sh
+scripts/check-zero-warning.sh
+scripts/test_ran_evidence.sh
+scripts/ran-gates.txt

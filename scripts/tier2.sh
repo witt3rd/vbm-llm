@@ -10,7 +10,8 @@ LEAN_PREFIX=$(lean --print-prefix)
 
 scripts/tier1.sh
 echo "tier2: the whole relabel-attack suite (the Lean attacks too; Tier 1 runs the others)"
-scripts/relabel-attacks.sh
+# a step that ran nothing (a refused tool) fails here, whatever its exit status was (docs/decisions/0002-ran-evidence.md)
+scripts/ran-evidence.sh gate tier2-relabel-attacks '^PASS relabel-attacks: ([0-9]+) of' scripts/relabel-attacks.sh
 echo "tier2: leanchecker --fresh VbmLlm"
 lake env "$LEAN_PREFIX/bin/leanchecker" --fresh VbmLlm
 echo "tier2: leanchecker --fresh VbmLlmProofs"

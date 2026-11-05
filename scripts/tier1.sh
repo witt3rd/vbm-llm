@@ -6,6 +6,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # A sourced library that has been replaced by a stub (`exit 0`) would end this script, and every test of it, with success: each is checked to define its function before it is sourced (the relabel-attack suite attacks this).
 [ "$(grep -c '^nocrash_begin()' scripts/lib-no-crash-record.sh)" = 1 ] || { echo "tier1: scripts/lib-no-crash-record.sh does not define nocrash_begin" >&2; exit 1; }
+# RAN-EVIDENCE (docs/decisions/0002-ran-evidence.md): a gate or self-test that never ran must not pass. Every test script and every concurrent gate ends with `ran: NAME: N cases` (N > 0, or the gate's own count line named in
+# scripts/ran-gates.txt); scripts/run-tests-parallel.sh and the check below FAIL a job without it, and a refused tool, a SKIPPED check or a stop by a guard is a failure, never a pass (scripts/ran-evidence.sh, scripts/test_ran_evidence.sh).
+[ "$(grep -c '^ran_done()' scripts/lib-ran.sh)" = 1 ] || { echo "tier1: scripts/lib-ran.sh does not define ran_done" >&2; exit 1; }
+[ "$(grep -c '^must_fail()' scripts/lib-ran.sh)" = 1 ] || { echo "tier1: scripts/lib-ran.sh does not define must_fail" >&2; exit 1; }
+[ "$(grep -c '^  check-dir)' scripts/ran-evidence.sh)" = 1 ] || { echo "tier1: scripts/ran-evidence.sh does not define check-dir" >&2; exit 1; }
 # No test may leave a crash record (systemd-coredump, hence a desktop notification): the whole run is wrapped (scripts/lib-no-crash-record.sh; its self-test is test_no_crash_record.sh).
 . scripts/lib-no-crash-record.sh; nocrash_begin
 
@@ -66,6 +71,8 @@ grep -q 'not explicitly referenced' <<<"$wout" || { echo "tier1: the file with a
 printf 'def f (x : Nat) : Nat := x\n' > "$st"
 lake env lean -DwarningAsError=true "$st" >/dev/null 2>&1 || { echo "tier1: a clean file fails under warningAsError (the control of the zero-warning self-test)" >&2; exit 1; }
 echo "tier1: zero-warning build: negative self-test ok (a file with a warning fails under warningAsError)"
+# The inline check above is the first version (it passes when lake is refused: the defect); scripts/check-zero-warning.sh is the check: the warning's own diagnostic is required, a clean file must pass, it prints `ran: zero-warning: 3 cases`.
+scripts/check-zero-warning.sh
 lake build VbmLlm VbmLlmProofs vbm-llm-vectors   # once, for the gates and every test (they build nothing more)
 
 # 2a. The axiom gate: every constant of ours depends only on propext, Classical.choice, Quot.sound (--selftest: a non-standard axiom is rejected).
@@ -91,6 +98,8 @@ par scripts/test_lint_public.sh
 # 3a. The protected set (scripts/protected-paths.txt, read by scripts/protected-set.sh): every class fails a fixture diff, a docs-only diff passes.
 par scripts/test_protected_set.sh
 # 3b. The parallel runner: a failing, missing or silently skipped script fails the run.
+# 3c'. The ran-evidence mechanism (scripts/lib-ran.sh, scripts/ran-evidence.sh): the shared negative test: a refused, missing, skipped, silent or zero-count check FAILS.
+par scripts/test_ran_evidence.sh
 par scripts/test_run_parallel.sh
 # 3c. The crash-record check and the quiet probe runner (scripts/lib-no-crash-record.sh): a coredumpctl entry fails the run (shim), a quiet crash leaves none.
 par scripts/test_no_crash_record.sh
@@ -104,6 +113,7 @@ for f in scripts/test_*.sh; do case " ${tests[*]} " in *" $f "*) ;; *) echo "tie
 echo "tier1: ${#tests[@]} test scripts: ${tests[*]}"
 bg tests scripts/run-tests-parallel.sh "${tests[@]}"
 bgwait
+scripts/ran-evidence.sh check-dir "$bgdir" scripts/ran-gates.txt   # every concurrent gate and the tests job ran something: its own count (scripts/ran-gates.txt) or a ran line
 nocrash_end
 
 echo "tier1: ok"
