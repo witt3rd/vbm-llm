@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
-# Tier 1: scripts/lib-no-crash-record.sh. Negative self-tests: a coredumpctl that reports an entry for a /tmp executable makes nocrash_end FAIL (shim, no real core), an empty one passes, an unrelated
-# executable is ignored, a missing coredumpctl is skipped with a note; and a REAL deliberate crash under `quiet` exits 139 (asserted via $?) and leaves nothing for the real coredumpctl.
+# Tier 1: the crash-record check is the VENDORED, scoped one (scripts/land/lib/no-crash-record.sh; vbm-land's own tests are its full self-test): this repository's library IS that file, another process's crash is ignored, a crash of this run's own
+# process tree fails the check, a quiet crash exits 139 and leaves no record, and a probe launched without ulimit -c 0 is refused by run-probe.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-. scripts/lib-ran.sh   # ran_case counts each executed check, ran_done prints the evidence line `ran: NAME: N cases` (docs/decisions/0002-ran-evidence.md)
-[ "$(bash -c '. scripts/lib-no-crash-record.sh; echo loaded')" = loaded ] && ran_case || { echo "test_no_crash_record: scripts/lib-no-crash-record.sh does not load (a stub that exits?)" >&2; exit 1; }
+. scripts/lib-ran.sh
+ok_end=0; trap '[ "$ok_end" = 1 ] || { echo "test_no_crash_record: did not run to its end (a neutered or exiting library?)" >&2; exit 1; }' EXIT   # a library that exits when sourced must not pass
+command -v jq >/dev/null || { echo "test_no_crash_record: jq is required" >&2; exit 1; }
 . scripts/lib-no-crash-record.sh
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d); sleep 60 >/dev/null 2>&1 & kid=$!; trap 'kill "$kid" 2>/dev/null || true; rm -rf "$T"; [ "$ok_end" = 1 ] || { echo "test_no_crash_record: did not run to its end" >&2; exit 1; }' EXIT
 fail() { echo "test_no_crash_record: $*" >&2; exit 1; }
-mkshim() { printf '#!/usr/bin/env bash\n%s\n' "$1" > "$T/cdc"; chmod +x "$T/cdc"; }
-export NOCRASH_COREDUMPCTL="$T/cdc"
-mkshim 'echo "Wed 2026-01-01 00:00:00 UTC 1 1000 1000 SIGSEGV none /tmp/tmp.x/M/layout -"'
-nocrash_begin; if nocrash_end >/dev/null 2>"$T/err"; then fail "an entry for a /tmp executable did not fail the check"; fi
-grep -q 'M/layout' "$T/err" && ran_case || fail "the failure did not name the record"
-mkshim 'exit 0'; nocrash_begin; nocrash_end >/dev/null 2>&1 && ran_case || fail "an empty list failed the check"
-mkshim 'echo "Wed 2026-01-01 00:00:00 UTC 1 1000 1000 SIGSEGV none /usr/bin/firefox -"'; nocrash_begin; nocrash_end >/dev/null 2>&1 && ran_case || fail "an unrelated crash failed the check"
-export NOCRASH_COREDUMPCTL="$T/none"; nocrash_begin 2>"$T/err"; grep -q SKIPPED "$T/err" && ran_case || fail "a missing coredumpctl was not noted"; nocrash_end >/dev/null && ran_case || fail "a missing coredumpctl failed the check"
-# real: a deliberate SIGSEGV and SIGABRT under quiet, status asserted, and the real coredumpctl sees nothing
-unset NOCRASH_COREDUMPCTL
+cmp -s scripts/lib-no-crash-record.sh scripts/land/lib/no-crash-record.sh && ran_case || fail "scripts/lib-no-crash-record.sh is not the vendored library"
+rec() { jq -nc --arg pid "$1" --arg pp "$2" --arg exe "$3" --arg ts "$(( $(date +%s) * 1000000 ))" '{MESSAGE_ID:"fc2e22bc6ee647b6b90729ab34a250b1",COREDUMP_PID:$pid,COREDUMP_PROC_STATUS:("PPid:\t\($pp)\nNSsid:\t4242000\n"),COREDUMP_CGROUP:"/x/other.scope",COREDUMP_EXE:$exe,COREDUMP_TIMESTAMP:$ts,COREDUMP_CMDLINE:$exe}'; }
+shim() { printf '#!/usr/bin/env bash\ncat <<"EOF"\n%s\nEOF\n' "$(cat)" > "$T/jc"; chmod +x "$T/jc"; }
+nocrash_begin 2>/dev/null; export NOCRASH_JOURNALCTL=$T/jc
+rec 4242001 1 /tmp/other_probe | shim; nocrash_end >/dev/null 2>&1 && ran_case || fail "another process's crash (a fixed /tmp probe name) failed this landing's check"
+rec 4242002 "$kid" /usr/bin/foo | shim; nocrash_end >/dev/null 2>&1 && fail "a crash inside this run's own process tree passed the check" || ran_case
+unset NOCRASH_JOURNALCTL
 printf '#include <stdlib.h>\nint main(int c, char **v) { if (c > 1) abort(); *(volatile int *)0 = 1; return 0; }\n' > "$T/c.c"; "${CC:-cc}" -o "$T/crash" "$T/c.c"
-nocrash_begin
+nocrash_begin 2>/dev/null
 rc=0; quiet "$T/crash" 2>/dev/null || rc=$?; [ "$rc" = 139 ] && ran_case || fail "the quiet SIGSEGV probe exited $rc, not 139"
 rc=0; quiet "$T/crash" abort 2>/dev/null || rc=$?; [ "$rc" = 134 ] && ran_case || fail "the quiet SIGABRT probe exited $rc, not 134"
-nocrash_end && ran_case || fail "a quiet crash left a record"
-ran_done test_no_crash_record
-echo "test_no_crash_record: ok (shim: a record fails the check, none or unrelated passes, missing tool skips; real quiet crashes: 139 and 134, no record)"
+nocrash_end >/dev/null && ran_case || fail "a quiet crash left a record of this landing's tree"
+rc=0; bash -c 'ulimit -c unlimited; scripts/land/bin/run-probe --require' >/dev/null 2>&1 || rc=$?; [ "$rc" = 2 ] && ran_case || fail "a probe without ulimit -c 0 was not refused (exit $rc)"
+rc=0; scripts/land/bin/run-probe --core-limit 1 true >/dev/null 2>&1 || rc=$?; [ "$rc" = 2 ] && ran_case || fail "a raised core limit was not refused (exit $rc)"
+ran_done test_no_crash_record; ok_end=1
+echo "test_no_crash_record: ok (the vendored scoped check: foreign crash ignored, own tree's crash fails, quiet crashes 139 and 134 leave no record, an unscoped probe is refused)"
