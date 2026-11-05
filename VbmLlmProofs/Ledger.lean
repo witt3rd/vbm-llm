@@ -8,6 +8,7 @@ import VbmLlmProofs.Turn
 import VbmLlmProofs.Error
 import VbmLlmProofs.OpenRouter
 import VbmLlmProofs.Anthropic.Response
+import VbmLlmProofs.Anthropic.Request
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -131,6 +132,18 @@ def ledger : List Obligation := [
   O "anthropic-stop-reason-is-kept-as-text-and-classed-totally" ["anthropic-messages:Message.stop_reason"]
     (.proved [``VbmLlm.FinishClass.ofAnthropic_end_turn, ``VbmLlm.FinishClass.ofAnthropic_stop_sequence, ``VbmLlm.FinishClass.ofAnthropic_tool_use, ``VbmLlm.FinishClass.ofAnthropic_pause_turn, ``VbmLlm.FinishClass.ofAnthropic_refusal,
       ``VbmLlm.FinishClass.ofAnthropic_truncated_iff, ``VbmLlm.FinishClass.ofAnthropic_unknown]),
+  -- the Anthropic messages request: the encoder
+  O "anthropic-request-members-are-the-fields" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages",
+      "anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.tool_choice", "anthropic-messages:MessageCreateParams.stream",
+      "anthropic-messages:MessageCreateParams.temperature", "anthropic-messages:MessageCreateParams.top_p", "anthropic-messages:MessageCreateParams.top_k", "anthropic-messages:MessageCreateParams.stop_sequences"]
+    (.proved [``VbmLlm.Anthropic.encode_get_model, ``VbmLlm.Anthropic.encode_get_max_tokens, ``VbmLlm.Anthropic.encode_get_messages, ``VbmLlm.Anthropic.encode_get_system, ``VbmLlm.Anthropic.encode_get_tools,
+      ``VbmLlm.Anthropic.encode_get_tool_choice, ``VbmLlm.Anthropic.encode_get_stream, ``VbmLlm.Anthropic.encode_get_temperature, ``VbmLlm.Anthropic.encode_get_top_p, ``VbmLlm.Anthropic.encode_get_top_k,
+      ``VbmLlm.Anthropic.encode_get_stop_sequences, ``VbmLlm.Anthropic.encode_object]),
+  O "anthropic-request-an-absent-field-is-left-out-never-null" ["anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.stop_sequences",
+      "anthropic-messages:ToolResultBlockParam.content", "anthropic-messages:ToolResultBlockParam.is_error"]
+    (.proved [``VbmLlm.Anthropic.encode_members_not_null, ``VbmLlm.Anthropic.encodeBlock_toolResult]),
+  O "anthropic-request-max-tokens-is-required-and-a-plain-natural" ["anthropic-messages:MessageCreateParams.max_tokens"] (.proved [``VbmLlm.Anthropic.encode_max_tokens_natural]),
+  O "anthropic-request-a-tool-call-is-written-with-its-input-as-an-object" ["anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id"] (.proved [``VbmLlm.Anthropic.encodeBlock_toolUse]),
   O "anthropic-messages-adapter" [] (.open_ "the request codec (system at the top level, content blocks, one user message of tool results, max_tokens required), the named-event stream fold, and the turn shape over `pair` (the reply decoder, usage and stop reasons have landed above)"),
   -- OpenRouter's variant of the chat profile
   O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),

@@ -151,6 +151,31 @@ anthropic-messages ToolUseBlock.caller ignored
 anthropic-messages Usage.cache_creation ignored the breakdown by cache lifetime
 anthropic-messages Usage.service_tier ignored
 anthropic-messages Usage.server_tool_use ignored
+anthropic-messages MessageCreateParams.model policy string, an opaque name; required
+anthropic-messages MessageCreateParams.max_tokens read natural; required, written as a plain natural
+anthropic-messages MessageCreateParams.messages read array of messages; required
+anthropic-messages MessageCreateParams.system policy a string (the array of text blocks form is not modelled); left out when absent
+anthropic-messages MessageCreateParams.tools read array of tools; an empty list is left out
+anthropic-messages MessageCreateParams.tool_choice read auto, any, none or a named tool, each with the parallel-use flag where the schema has it
+anthropic-messages MessageCreateParams.stream read boolean; left out when absent
+anthropic-messages MessageCreateParams.temperature read number lexeme; left out when absent
+anthropic-messages MessageCreateParams.top_p read number lexeme; left out when absent
+anthropic-messages MessageCreateParams.top_k read natural; left out when absent
+anthropic-messages MessageCreateParams.stop_sequences read array of strings; an empty list is left out
+anthropic-messages MessageParam.role read user or assistant
+anthropic-messages MessageParam.content policy an array of blocks (a bare string is read as one text block; image and document blocks are not modelled and are refused)
+anthropic-messages ToolUseBlockParam.input policy the members of an object, written verbatim
+anthropic-messages ToolResultBlockParam.tool_use_id read string; required
+anthropic-messages ToolResultBlockParam.content policy a string (the array form is not modelled); left out when absent
+anthropic-messages ToolResultBlockParam.is_error read boolean; left out when absent
+anthropic-messages Tool.name read string; required
+anthropic-messages Tool.description read string; left out when absent
+anthropic-messages Tool.input_schema read the members of a JSON Schema object; required
+anthropic-messages Tool.strict read boolean; left out when absent
+anthropic-messages MessageCreateParamsBase.cache_control ignored
+anthropic-messages MessageCreateParamsBase.metadata ignored
+anthropic-messages MessageCreateParamsBase.output_config ignored
+anthropic-messages MessageCreateParamsBase.service_tier ignored
 openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
 openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
 openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)
