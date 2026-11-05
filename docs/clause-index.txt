@@ -50,3 +50,54 @@ openai-chat ChatCompletionResponseMessage.role ignored the constant assistant
 openai-chat ChatCompletionResponseMessage.annotations ignored
 openai-chat ChatCompletionResponseMessage.function_call ignored deprecated, replaced by tool_calls
 openai-chat ChatCompletionResponseMessage.audio ignored
+openai-chat CreateChatCompletionRequest.model policy string, an opaque name; required by the schema and written always, never looked at
+openai-chat CreateChatCompletionRequest.messages read array of messages; required, at least one (the schema's minItems)
+openai-chat ChatCompletionRequestSystemMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
+openai-chat ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
+openai-chat ChatCompletionRequestUserMessage.content policy text only: the string form of `content` (the array of text, image, audio and file parts is not modelled)
+openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present and left out when the turn is only tool calls (the schema's null is never written)
+openai-chat ChatCompletionRequestAssistantMessage.tool_calls read the calls as the provider sent them (id, `function` type, name, arguments verbatim); left out when there are none
+openai-chat ChatCompletionRequestToolMessage.tool_call_id read string; the id of the call this message answers
+openai-chat ChatCompletionRequestToolMessage.content policy text only: the string form of `content`
+openai-chat CreateChatCompletionRequest.tools policy array of tools; left out when empty (a server may refuse an empty array)
+openai-chat ChatCompletionTool.type read always `function`, the only value the schema lists
+openai-chat FunctionObject.name read string; required
+openai-chat FunctionObject.description read string; left out when absent
+openai-chat FunctionObject.parameters policy the members of the JSON Schema object, as the caller wrote them (never inspected); left out when absent
+openai-chat FunctionObject.strict read boolean; left out when absent
+openai-chat CreateChatCompletionRequest.tool_choice read `none`, `auto`, `required` or a named function; left out when absent
+openai-chat ChatCompletionNamedToolChoice.function.name read string; required, with `type` `function`
+openai-chat CreateChatCompletionRequest.parallel_tool_calls read boolean; left out when absent
+openai-chat CreateChatCompletionRequest.stream read boolean; left out when absent
+openai-chat ChatCompletionStreamOptions.include_usage read boolean, the member of `stream_options`; `stream_options` is left out when it is absent
+openai-chat CreateChatCompletionRequest.max_completion_tokens read a plain natural; left out when absent
+openai-chat CreateChatCompletionRequest.max_tokens read a plain natural (deprecated by the schema, still the member compatible servers read); left out when absent
+openai-chat CreateChatCompletionRequest.temperature policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
+openai-chat CreateChatCompletionRequest.top_p policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
+openai-chat CreateChatCompletionRequest.modalities ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.reasoning_effort ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.frequency_penalty ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.presence_penalty ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.web_search_options ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.top_logprobs ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.response_format ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.audio ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.store ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.stop ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.logit_bias ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.logprobs ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.n ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.prediction ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.seed ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.function_call ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.functions ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.metadata ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.user ignored not modelled: not written, and refused by no decoder
+openai-chat CreateChatCompletionRequest.service_tier ignored not modelled: not written, and refused by no decoder
+openai-chat ChatCompletionRequestAssistantMessage.refusal ignored not modelled
+openai-chat ChatCompletionRequestAssistantMessage.name ignored not modelled
+openai-chat ChatCompletionRequestAssistantMessage.audio ignored not modelled
+openai-chat ChatCompletionRequestAssistantMessage.function_call ignored not modelled
+openai-chat ChatCompletionRequestFunctionMessage ignored not modelled
+openai-chat ChatCompletionRequestSystemMessage.name ignored not modelled
+openai-chat ChatCompletionRequestUserMessage.name ignored not modelled

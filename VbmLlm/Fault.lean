@@ -12,7 +12,7 @@ inductive Step where
 
 /-- The JSON types a decoder expects. -/
 inductive Ty where
-  | object | array | string | natural
+  | object | array | string | natural | boolean | number
   deriving DecidableEq, Repr
 
 /-- Why a value is refused. -/
@@ -49,6 +49,8 @@ def Ty.render : Ty → String
   | .array => "an array"
   | .string => "a string"
   | .natural => "a natural number"
+  | .boolean => "a boolean"
+  | .number => "a number"
 
 def Kind.render : Kind → String
   | .missing => "is missing"

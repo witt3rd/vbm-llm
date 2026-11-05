@@ -3,6 +3,7 @@ import VbmLlmProofs.Finish
 import VbmLlmProofs.Usage
 import VbmLlmProofs.OpenAI.Response
 import VbmLlmProofs.OpenAI.Stream
+import VbmLlmProofs.OpenAI.Request
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -59,7 +60,16 @@ def ledger : List Obligation := [
   O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- not yet built (open) and not decidable by a machine (limit)
-  O "openai-request-codec-round-trip" [] (.open_ "request encode and decode: `decode (encode m) = m` on the typed request (a later slice)"),
+  -- the OpenAI chat-completions request (encoder; the decoder and the round trip are the next landing)
+  O "openai-request-members-are-the-fields" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.parallel_tool_calls", "openai-chat:CreateChatCompletionRequest.stream", "openai-chat:ChatCompletionStreamOptions.include_usage",
+      "openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens", "openai-chat:CreateChatCompletionRequest.temperature", "openai-chat:CreateChatCompletionRequest.top_p"]
+    (.proved [``VbmLlm.OpenAI.encode_get_model, ``VbmLlm.OpenAI.encode_get_messages, ``VbmLlm.OpenAI.encode_get_tools, ``VbmLlm.OpenAI.encode_get_tool_choice, ``VbmLlm.OpenAI.encode_get_parallel_tool_calls,
+      ``VbmLlm.OpenAI.encode_get_stream, ``VbmLlm.OpenAI.encode_get_stream_options, ``VbmLlm.OpenAI.encode_get_max_completion_tokens, ``VbmLlm.OpenAI.encode_get_max_tokens, ``VbmLlm.OpenAI.encode_get_temperature,
+      ``VbmLlm.OpenAI.encode_get_top_p, ``VbmLlm.OpenAI.encode_object]),
+  O "openai-request-an-absent-field-is-left-out-never-null" ["openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.max_completion_tokens"] (.proved [``VbmLlm.OpenAI.encode_members_not_null, ``VbmLlm.OpenAI.mem_opt]),
+  O "openai-request-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens"] (.proved [``VbmLlm.OpenAI.natOf_natNumber, ``VbmLlm.OpenAI.leadRest_val]),
+  O "openai-request-tool-calls-are-written-as-read" ["openai-chat:ChatCompletionRequestAssistantMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeToolCall_encodeToolCall]),
+  O "openai-request-codec-round-trip" [] (.open_ "the request decoder and `decode (encode m) = m` on the typed request (the next landing; the encoder is proved above)"),
   O "openai-stream-merge-rules" ["openai-chat:CreateChatCompletionStreamResponse.id", "openai-chat:CreateChatCompletionStreamResponse.model", "openai-chat:CreateChatCompletionStreamResponse.usage",
       "openai-chat:CreateChatCompletionStreamResponse.choices.finish_reason", "openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionStreamResponseDelta.refusal",
       "openai-chat:ChatCompletionMessageToolCallChunk.id", "openai-chat:ChatCompletionMessageToolCallChunk.function.name", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]

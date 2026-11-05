@@ -1,4 +1,4 @@
-# The pinned schema: OpenAI chat-completions (response)
+# The pinned schema: OpenAI chat-completions (response and request)
 
 The convention is a published, versioned, machine-readable document; the library reads it, never the vendor's prose from memory.
 
@@ -7,7 +7,7 @@ The convention is a published, versioned, machine-readable document; the library
 | source | `https://raw.githubusercontent.com/openai/openai-openapi/manual_spec/openapi.yaml` (OpenAPI 3.0.0, `info.version` 2.3.0, the repository's `manual_spec` branch) |
 | fetched | 2026-11-05, read only |
 | sha256 of the document | `6a6c681b182002de4ad335fa80214158f2d8f383a418f865c87876c3ed67cad9` (1,376,003 bytes) |
-| components read | `CreateChatCompletionResponse`, `ChatCompletionResponseMessage`, `ChatCompletionMessageToolCalls`, `ChatCompletionMessageToolCall`, `CompletionUsage`, `CreateChatCompletionStreamResponse`, `ChatCompletionStreamResponseDelta`, `ChatCompletionMessageToolCallChunk`; the response examples of `POST /chat/completions` |
+| components read | `CreateChatCompletionResponse`, `ChatCompletionResponseMessage`, `ChatCompletionMessageToolCalls`, `ChatCompletionMessageToolCall`, `CompletionUsage`, `CreateChatCompletionStreamResponse`, `ChatCompletionStreamResponseDelta`, `ChatCompletionMessageToolCallChunk`; for the request: `CreateChatCompletionRequest`, `ChatCompletionRequestMessage` (the system, developer, user, assistant and tool messages), `ChatCompletionTool`, `FunctionObject`, `ChatCompletionToolChoiceOption`, `ChatCompletionNamedToolChoice`, `ChatCompletionStreamOptions`; the response examples of `POST /chat/completions` |
 
 The clause index (`clause-index.txt` in this directory's parent) lists every property of these components as read, policy or ignored. Fetching the document again and finding another hash is a **schema bump**: read the diff of the components above, update the index and the decoder, then change this table; nothing else may move the pin.
 
@@ -18,6 +18,13 @@ The clause index (`clause-index.txt` in this directory's parent) lists every pro
 * `ChatCompletionResponseMessage` requires `role`, `content` (string or null), `refusal` (string or null). `tool_calls` is an array of `ChatCompletionMessageToolCall`.
 * `ChatCompletionMessageToolCall` requires `id`, `type` (the enum `function` only, in this version), `function` with `name` and `arguments`, both strings: `arguments` is JSON **text** that the model may have got wrong, and is kept verbatim.
 * `CompletionUsage` requires `prompt_tokens`, `completion_tokens`, `total_tokens` (integers); `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` are optional detail counts. `prompt_tokens` includes the cached tokens, `completion_tokens` the reasoning tokens.
+
+## What the document says that the request encoder relies on
+
+* `CreateChatCompletionRequest` requires `model` and `messages` (at least one); `tools` (functions only), `tool_choice` (`none`, `auto`, `required` or a named function), `parallel_tool_calls`, `stream`, `stream_options.include_usage`, `max_completion_tokens`, `max_tokens` (deprecated, still the member compatible servers read), `temperature` and `top_p` are optional and nullable. The encoder writes an absent field **left out**, never as `null`.
+* A message is one of `system`, `developer`, `user`, `assistant`, `tool` (the deprecated `function` role is not modelled). `content` is modelled as its string form only: the schema also allows arrays of content parts (images, audio, files for the user), which are not modelled yet. An assistant message requires `role` and carries `content` unless it has `tool_calls`; a tool message requires `role`, `content` and `tool_call_id`.
+* A tool is `{type: "function", function: {name, description?, parameters?, strict?}}`; `parameters` is a JSON Schema object the library does not look into.
+* The numbers `temperature` and `top_p` are kept as number lexemes (the pinned `vbm-json` never reads a number as a float); the schema's ranges (0 to 2, 0 to 1) are the provider's to enforce.
 
 ## Provenance of the vectors
 
