@@ -28,7 +28,8 @@ Until the flip, CI ran on the owner's self-hosted runner. A public repository mu
 1. The owner changed the visibility and an anonymous `git clone` was checked.
 2. The settings below that need a public repository were applied at once, and the self-hosted runner was removed. The workflows have no `pull_request` trigger, so no outside code reached it meanwhile.
 3. One commit returned CI to hosted runners (`runs-on: ubuntu-latest`, `jdx/mise-action` pinned by sha to install the pinned Lean) and set `.github/visibility` to `public`; it landed with `scripts/land-direct` and its push CI was read green on a hosted runner.
-4. The release-tag ruleset was applied once no release was in flight.
+4. The weekly update check of the vendored lander (`.github/workflows/vbm-land-update.yml`, read-only, no secret) was enabled once vbm-land v0.3.3 existed.
+5. The release-tag ruleset was applied once no release was in flight.
 
 ## Settings (each has a read-back)
 
