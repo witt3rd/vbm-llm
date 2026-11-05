@@ -50,6 +50,8 @@ echo "tier1: import scan: negative self-tests ok (each import outside Init, Lean
 
 # 1b. Pipefail-unsafe pipelines (an early-exiting consumer) are flaky by construction; the lint has a negative self-test.
 scripts/lint-pipefail.sh
+# Long runners (scripts/long-runners.txt) run under scripts/run-scoped.sh (a bounded transient scope, reaped on exit: an aborted run cannot orphan); the lint is negative-tested here (a guard against accidents: indirection is its stated limit).
+scripts/lint-scoped-runners.sh --selftest
 
 # 1c. Proofs by evaluation over big data overflowed the independent checker once; the lint has fixture self-tests, run here with `--selftest`.
 scripts/lint-proof-eval.sh --selftest
@@ -107,6 +109,10 @@ par scripts/test_no_crash_record.sh
 par scripts/test_gate_diff_improving.sh
 # 3e. The relabel-attack suite (scripts/relabel-attacks.sh, scripts/attacks/): every demonstrated way to relabel a gate is refused by the tree's own gates, and the suite fails when its gates are stubbed.
 par scripts/test_relabel_attacks.sh
+
+# 3f. scripts/run-scoped.sh (status, bound, an aborted run leaves no orphan) and scripts/lib-reap.sh (an aborted script leaves none of its background jobs).
+par scripts/test_run_scoped.sh
+par scripts/test_reap.sh
 
 # 4. The declared test scripts, in parallel; a failing, missing or silently skipped one fails Tier 1. Every scripts/test_*.sh must be declared.
 for f in scripts/test_*.sh; do case " ${tests[*]} " in *" $f "*) ;; *) echo "tier1: $f is not declared with par" >&2; exit 1;; esac; done
