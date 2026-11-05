@@ -21,6 +21,7 @@ case ${1:-} in
     done < "$list"; exit $bad;;
   --core-limit) want=${2:?--core-limit needs a value}; shift 2;;
 esac
+"$here/no-build-guard" || exit 2   # a host with a no-build marker runs nothing (docs/no-build-host.md); before the compiler, before the TMPDIR
 [ $# -gt 0 ] || { echo "usage: run-probe [--core-limit 0] CMD... | --require | --lint LIST [ROOT]" >&2; exit 2; }
 [ "$want" = 0 ] || refuse "a probe must run with ulimit -c 0; asked for a core limit of $want"
 nocrash_build || refuse "no preload (needs a C compiler)"
