@@ -19,4 +19,5 @@ import VbmLlm.OpenAI.ApiError
 import VbmLlm.Turn
 import VbmLlm.OpenAI.Turn
 import VbmLlm.OpenAI.Render
+import VbmLlm.Context
 /-! # vbm-llm: the wire contract of LLM provider conventions (imports `Init` and the pinned `vbm-json` only: see `docs/decisions/0001-vbm-llm.md`). -/

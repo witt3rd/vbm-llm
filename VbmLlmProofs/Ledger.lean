@@ -5,6 +5,7 @@ import VbmLlmProofs.OpenAI.Response
 import VbmLlmProofs.OpenAI.Stream
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
+import VbmLlmProofs.Context
 import VbmLlmProofs.Error
 import VbmLlmProofs.OpenRouter
 import VbmLlmProofs.Anthropic.Response
@@ -126,6 +127,10 @@ def ledger : List Obligation := [
   O "turn-text-is-never-dropped-or-reordered" ["openai-chat-turn:text-keeps-its-order"] (.proved [``VbmLlm.pair_texts, ``VbmLlm.pairFrom_texts, ``VbmLlm.close_texts]),
   O "turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["openai-chat-turn:prefix-stable"]
     (.proved [``VbmLlm.OpenAI.render_prefix_stable, ``VbmLlm.pair_prefix_stable, ``VbmLlm.pairFrom_append_assistant]),
+  -- the one-action context
+  O "context-the-prompt-is-the-prefix-the-state-and-the-observation-only" [] (.proved [``VbmLlm.messages_eq, ``VbmLlm.messages_length, ``VbmLlm.messages_inj, ``VbmLlm.request_messages, ``VbmLlm.messages_paired]),
+  O "context-the-system-prefix-bytes-are-stable-across-steps" [] (.proved [``VbmLlm.prefix_stable, ``VbmLlm.prefix_state_stable]),
+  O "context-the-prompt-size-is-the-sum-of-the-three-parts" [] (.proved [``VbmLlm.bytes_eq, ``VbmLlm.bytes_le]),
   -- the Anthropic messages adapter: the reply (the request, the stream and the turn shape are open)
   O "anthropic-reply-decode-is-characterised" ["anthropic-messages:Message.id", "anthropic-messages:Message.model", "anthropic-messages:Message.content", "anthropic-messages:Message.stop_reason", "anthropic-messages:Message.stop_sequence", "anthropic-messages:Message.usage"]
     (.proved [``VbmLlm.Anthropic.decode_ok_iff, ``VbmLlm.Anthropic.decodeContent_ok_iff, ``VbmLlm.Anthropic.decodeBlocks_ok_iff, ``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.decode_no_content, ``VbmLlm.Anthropic.decode_content_not_array]),
