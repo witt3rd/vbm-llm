@@ -1,6 +1,7 @@
 import VbmLlm.OpenAI.Response
 import VbmLlm.Finish
 import VbmLlm.Usage
+import VbmLlm.OpenAI.Stream
 /-! # A plain-text rendering of a decoded reply, and of a refusal
 
 For the recorded conformance vectors (`vectors/`) and for diagnostics: one line per fact, strings quoted, nothing that depends on the machine. The rendering is **not** a wire format and
@@ -43,5 +44,21 @@ def Response.render (r : Response) : String :=
 def renderResult : Except Fault Response → String
   | .ok r => "ok\n" ++ r.render ++ "\n"
   | .error f => "error\n" ++ f.render ++ "\n"
+
+def StreamFault.render : StreamFault → String
+  | .notJson i => s!"event {i} is neither the sentinel nor JSON"
+  | .eventType i t => s!"event {i} has the type {t.quote}, which the convention does not use"
+  | .chunk i f => s!"chunk {i}: {f.render}"
+  | .missingIndex i => s!"chunk {i} has a choice or a tool-call fragment with no index"
+  | .afterDone i => s!"event {i} follows the sentinel"
+  | .callIdentity => "a completed tool call has no id or no name"
+  | .noChoices => "the stream ended with the sentinel but carried no choice"
+
+/-- The outcome of a fold: its kind, then the reply (partial for `truncated` and `error chunk`). -/
+def renderOutcome : Except StreamFault Outcome → String
+  | .ok (.complete r) => "complete\n" ++ r.render ++ "\n"
+  | .ok (.truncated r) => "truncated\n" ++ r.render ++ "\n"
+  | .ok (.errorChunk m r) => s!"error chunk message={optS m}\n" ++ r.render ++ "\n"
+  | .error f => "fault\n" ++ f.render ++ "\n"
 
 end VbmLlm.OpenAI

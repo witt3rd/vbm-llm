@@ -34,6 +34,10 @@ no HTTP, no retries, no credentials, no prices, **no model names** (a model is a
 7. A contradictory usage report (more cached than prompt tokens) is refused when normalized, never clamped.
 8. Unread fields are ignored and listed in the clause index as such.
 
-## 5. What is not here yet
+## 5. The stream fold (policies)
 
-The request codec, the stream fold (and the typed `Truncated` for a stream with no terminal event), the tool-call turn machine, the Anthropic adapter and OpenRouter's variants are open claims in the ledger, in that order. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.
+A stream folds to exactly one **outcome**: `complete` (the sentinel was seen and nothing followed it), `truncated` (the events ended with no sentinel: the partial reply is typed as partial, never presented as complete), or `errorChunk` (a chunk carried an error: the fold stops there with the message and the partial reply; whether to discard what was received is the consumer's decision). Merge rules: the first `id`/`model`, the first tool-call `id`/`name` win; text, refusal and arguments concatenate in order; the last non-null `usage` and the last non-null `finish_reason` win; choices and tool calls are keyed by `index` in order of first appearance. A missing `index` is refused unless the policy reads it as 0 (the schema requires it); an event with a type the convention does not use is refused; an event with empty data is ignored; a `complete` reply has a choice and every call has an id and a name. The fold starts from **events** (`VbmLlm.Event`), the interface of `vbm-sse`: a conformance checker's splitter stands in until it is pinned.
+
+## 6. What is not here yet
+
+The request codec, the tool-call turn machine, the Anthropic adapter and OpenRouter's variants are open claims in the ledger, in that order. The closure gate (the specified share of the executed mass) of the project these gates were first built in is not ported: every claim here names theorems about the functions that are the library.

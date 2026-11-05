@@ -2,6 +2,7 @@ import VbmLlmProofs.Wire
 import VbmLlmProofs.Finish
 import VbmLlmProofs.Usage
 import VbmLlmProofs.OpenAI.Response
+import VbmLlmProofs.OpenAI.Stream
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -59,7 +60,28 @@ def ledger : List Obligation := [
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- not yet built (open) and not decidable by a machine (limit)
   O "openai-request-codec-round-trip" [] (.open_ "request encode and decode: `decode (encode m) = m` on the typed request (a later slice)"),
-  O "openai-stream-fold-equals-single-shot" [] (.open_ "a stream of chunks folds to exactly the reply the single-shot decode gives, and a stream with no terminal event is Truncated (a later slice, over the SSE event interface)"),
+  O "openai-stream-merge-rules" ["openai-chat:CreateChatCompletionStreamResponse.id", "openai-chat:CreateChatCompletionStreamResponse.model", "openai-chat:CreateChatCompletionStreamResponse.usage",
+      "openai-chat:CreateChatCompletionStreamResponse.choices.finish_reason", "openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionStreamResponseDelta.refusal",
+      "openai-chat:ChatCompletionMessageToolCallChunk.id", "openai-chat:ChatCompletionMessageToolCallChunk.function.name", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
+    (.proved [``VbmLlm.OpenAI.mergeCall_arguments, ``VbmLlm.OpenAI.mergeCall_id_first, ``VbmLlm.OpenAI.mergeCall_name_first, ``VbmLlm.OpenAI.mergeCall_id_kept, ``VbmLlm.OpenAI.mergeCall_name_kept,
+      ``VbmLlm.OpenAI.applyChoice_content, ``VbmLlm.OpenAI.applyChoice_refusal, ``VbmLlm.OpenAI.applyChoice_finish, ``VbmLlm.OpenAI.applyChunk_id, ``VbmLlm.OpenAI.applyChunk_model, ``VbmLlm.OpenAI.applyChunk_usage]),
+  O "openai-stream-chunk-boundaries-do-not-matter" ["openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
+    (.proved [``VbmLlm.OpenAI.foldPieces_eq, ``VbmLlm.OpenAI.pieces_content, ``VbmLlm.OpenAI.foldArgs_arguments, ``VbmLlm.OpenAI.foldArgs_id, ``VbmLlm.OpenAI.foldArgs_name]),
+  O "openai-stream-missing-index-is-refused-by-default" ["openai-chat:CreateChatCompletionStreamResponse.choices.index", "openai-chat:ChatCompletionMessageToolCallChunk.index"]
+    (.proved [``VbmLlm.OpenAI.applyCalls_missing_index_refused, ``VbmLlm.OpenAI.applyCalls_missing_index_zero, ``VbmLlm.OpenAI.foldItems_missing_index]),
+  O "openai-stream-no-sentinel-is-never-complete" ["openai-chat-sse:sentinel"]
+    (.proved [``VbmLlm.OpenAI.foldWith_no_done, ``VbmLlm.OpenAI.foldItems_complete, ``VbmLlm.OpenAI.foldItems_nil]),
+  O "openai-stream-nothing-follows-the-sentinel" ["openai-chat-sse:sentinel"] (.proved [``VbmLlm.OpenAI.foldItems_after_done]),
+  O "openai-stream-error-chunk-stops-the-fold-with-the-partial-reply" ["openai-chat-sse:error-chunk"] (.proved [``VbmLlm.OpenAI.foldItems_error_chunk, ``VbmLlm.OpenAI.errorOf_null, ``VbmLlm.OpenAI.errorOf_string, ``VbmLlm.OpenAI.errorOf_present]),
+  O "openai-stream-a-complete-reply-has-a-choice" ["openai-chat-sse:complete-has-identity"] (.proved [``VbmLlm.OpenAI.foldWith_complete_choices]),
+  O "openai-stream-chunk-is-an-object" ["openai-chat:CreateChatCompletionStreamResponse.choices"] (.proved [``VbmLlm.OpenAI.decodeChunk_not_object]),
+  O "openai-stream-delta-and-fragment-shapes" ["openai-chat:CreateChatCompletionStreamResponse.choices.delta", "openai-chat:ChatCompletionStreamResponseDelta.tool_calls", "openai-chat:ChatCompletionMessageToolCallChunk.type"]
+    (.proved [``VbmLlm.OpenAI.decodeChunkChoice_delta_wrong, ``VbmLlm.OpenAI.decodeChunkChoice_no_delta, ``VbmLlm.OpenAI.decodeDelta_tool_calls_wrong, ``VbmLlm.OpenAI.decodeToolCallDelta_other_type_refused]),
+  O "openai-stream-events" ["openai-chat-sse:sentinel", "openai-chat-sse:event-type"]
+    (.proved [``VbmLlm.OpenAI.decodeItem_done, ``VbmLlm.OpenAI.decodeItem_empty, ``VbmLlm.OpenAI.decodeItem_event_type]),
+  O "openai-stream-fold-equals-single-shot" ["openai-chat-sse:complete-has-identity"]
+    (.partly [``VbmLlm.OpenAI.pieces_content, ``VbmLlm.OpenAI.foldArgs_arguments, ``VbmLlm.OpenAI.foldWith_complete_choices]
+      "proved: text and arguments split at any chunk boundary fold to the same strings, and a complete reply always has a choice. Open: the whole equality `fold (stream r) = r` for every well-formed stream (interleaved choices and calls); the recorded streams with a single-shot twin (`vectors/openai-chat-stream/*.single.json`) check it on data, not by proof"),
   O "openai-tool-call-turn-pairing" [] (.open_ "every call of an assistant turn answered exactly once, in order; the rendered prefix stable when the context is extended (a later slice)"),
   O "anthropic-messages-adapter" [] (.open_ "request and response codecs, named-event stream fold, one user message of tool results, input_tokens excludes the cache (a later slice)"),
   O "openrouter-chat-variant" [] (.open_ "the four deviations of the chat profile: usage in a frame with choices, native_finish_reason, a mid-stream error chunk, comment lines (a later slice)"),

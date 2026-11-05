@@ -1,0 +1,1 @@
+{"id":"chatcmpl-1","model":"m","choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"python","arguments":"{\"code\":\"1+1\"}"}}]},"finish_reason":"tool_calls"}]}

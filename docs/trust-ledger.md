@@ -2,7 +2,9 @@
 
 One file listing **everything outside our direct control that vbm-llm executes or depends on**: code we did not prove, code we did not write, and facilities we assume. It exists because verified by construction is the first priority: the size of the unverified base is the most critical measure. A boundary with no entry here does not land (`scripts/trust-ledger-check.sh`, Tier 1). The pattern is borrowed from the project the gates were first built in; only the derivation of the required set differs.
 
-**Snapshot at the first slice:** the library has no C, no `extern`, no executable of its own except the vector checker (`vectors/Main.lean`, Lean, not part of any export). What the build depends on is below. The one outside library is `vbm-json` (T09), whose proofs are trusted by revision and hash, not re-proved here.
+**Test code that is trusted:** `vectors/Main.lean` carries a minimal server-sent-event splitter that stands in for the `vbm-sse` library until it is pinned (whole buffer, the WHATWG rules). It is not part of the library; a mistake in it can only make a recorded stream decode wrongly, which the recorded expectations (read by a reviewer) would show. It goes away when the splitter library is pinned.
+
+**Snapshot at the first slice (unchanged by the stream fold):** the library has no C, no `extern`, no executable of its own except the vector checker (`vectors/Main.lean`, Lean, not part of any export). What the build depends on is below. The one outside library is `vbm-json` (T09), whose proofs are trusted by revision and hash, not re-proved here.
 
 ## How the gate keeps this file true
 

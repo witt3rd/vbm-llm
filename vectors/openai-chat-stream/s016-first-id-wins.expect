@@ -1,0 +1,6 @@
+complete
+response id="first" model="m1"
+choice index=0 finish="stop" class=complete
+  content "ab"
+  refusal none
+usage none

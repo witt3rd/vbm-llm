@@ -1,0 +1,7 @@
+complete
+response id="chatcmpl-1" model="m"
+choice index=0 finish="stop" class=complete
+  content "Hello, world"
+  refusal none
+usage prompt=10 completion=4 total=14 cached=none reasoning=none
+tokens uncached=10 read=0 write=0 output=4 reasoning=0

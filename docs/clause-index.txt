@@ -1,4 +1,4 @@
-# The clause index: the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
+# The clause index (`openai-chat` is the OpenAPI document pinned in docs/schemas/openai-chat.md; `openai-chat-sse` is the stream framing, which that document does not specify: it is taken from the vendor's streaming description and OpenRouter's documented examples, always `policy`): the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
 # The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
@@ -22,6 +22,25 @@ openai-chat CompletionUsage.completion_tokens read natural; includes the reasoni
 openai-chat CompletionUsage.total_tokens read natural
 openai-chat CompletionUsage.prompt_tokens_details.cached_tokens read natural, a part of prompt_tokens
 openai-chat CompletionUsage.completion_tokens_details.reasoning_tokens read natural, a part of completion_tokens
+openai-chat CreateChatCompletionStreamResponse.id policy string; the first one seen wins, none required
+openai-chat CreateChatCompletionStreamResponse.model policy string, an opaque name; the first one seen wins, none required
+openai-chat CreateChatCompletionStreamResponse.choices policy array; absent, null or empty is no choice (the usage frame of stream_options.include_usage has none)
+openai-chat CreateChatCompletionStreamResponse.usage read CompletionUsage or null; the last non-null one wins
+openai-chat CreateChatCompletionStreamResponse.choices.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; choices are keyed by it
+openai-chat CreateChatCompletionStreamResponse.choices.delta policy the delta object; absent or null reads as an empty delta
+openai-chat CreateChatCompletionStreamResponse.choices.finish_reason read string or null; the last non-null one wins
+openai-chat ChatCompletionStreamResponseDelta.content read string or null; pieces concatenate in order
+openai-chat ChatCompletionStreamResponseDelta.refusal read string or null; pieces concatenate in order
+openai-chat ChatCompletionStreamResponseDelta.tool_calls read array of tool-call fragments; absent or null is none
+openai-chat ChatCompletionMessageToolCallChunk.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; fragments merge by it
+openai-chat ChatCompletionMessageToolCallChunk.id read string; the first one seen wins
+openai-chat ChatCompletionMessageToolCallChunk.type policy absent or `function`, any other word refused as unsupported
+openai-chat ChatCompletionMessageToolCallChunk.function.name read string; the first one seen wins (not concatenated)
+openai-chat ChatCompletionMessageToolCallChunk.function.arguments read string pieces; concatenated in order, kept verbatim
+openai-chat-sse sentinel policy the data `[DONE]` ends a stream and nothing may follow it; a stream that ends with no sentinel is a truncated outcome, never a complete reply
+openai-chat-sse event-type policy the convention names no event type: an event with a type other than the default is refused; an event with empty data is ignored
+openai-chat-sse error-chunk policy a chunk with an `error` member ends the fold with its message and the partial reply (the harness decides whether to discard what was received)
+openai-chat-sse complete-has-identity policy a completed stream has a choice, and every completed tool call has an id and a name
 openai-chat CreateChatCompletionResponse.created ignored integer timestamp
 openai-chat CreateChatCompletionResponse.object ignored the constant chat.completion
 openai-chat CreateChatCompletionResponse.service_tier ignored
