@@ -2,6 +2,7 @@
 # `openai-chat-turn` is the pairing of tool results with tool calls (docs/schemas/openai-chat.md, the turn section): the schema gives the message shapes, the sequence rule is stated by the vendor's function-calling guide in prose, so every clause is `policy`.
 # `openai-chat-status` is the class of the status of a failed call (VbmLlm.ErrorClass.ofStatus): the schema does not give it, the HTTP status codes' meaning is the standard's and the vendors' error pages, so every clause is `policy`.
 # `anthropic-messages` is the TypeScript type document pinned in docs/schemas/anthropic-messages.md.
+# `anthropic-messages-turn` is the pairing of tool results with tool calls in Anthropic's shape (docs/schemas/anthropic-messages.md, the turn section): the type document gives the block shapes, the sequence rule is stated by the vendor's tool-use guide in prose; every clause is `policy`, checked by recorded conversations.
 # `openrouter-chat` is the pair of documentation pages pinned in docs/schemas/openrouter-chat.md: OpenAI's profile plus four deviations, every clause `policy` (no machine-readable schema).
 # Line: <convention> <clause-id> <read|policy|ignored> <what the clause says and what the library does>.
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
@@ -176,6 +177,11 @@ anthropic-messages MessageCreateParamsBase.cache_control ignored
 anthropic-messages MessageCreateParamsBase.metadata ignored
 anthropic-messages MessageCreateParamsBase.output_config ignored
 anthropic-messages MessageCreateParamsBase.service_tier ignored
+anthropic-messages-turn answer-each-call-once policy every tool_use block is answered by one tool_result block, in call order, among the first blocks of the user message directly after the assistant message that made the call (the vendor's tool-use guide states this in prose)
+anthropic-messages-turn window policy the user text of a turn's window (text and orphan results, shown as text) follows the results in the same message; the window ends at the next assistant item or turn
+anthropic-messages-turn unanswered-placeholder policy a call with no recorded result is shown with the consumer's placeholder text
+anthropic-messages-turn orphan-is-text policy a result with no turn open in front of it is shown as user text, never as a tool_result block
+anthropic-messages-turn prefix-stable policy extending a conversation by an assistant item leaves the messages already rendered as they were; assistant messages are never joined
 openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
 openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
 openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)

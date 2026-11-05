@@ -10,6 +10,7 @@ import VbmLlmProofs.OpenRouter
 import VbmLlmProofs.Anthropic.Response
 import VbmLlmProofs.Anthropic.Request
 import VbmLlmProofs.Anthropic.RequestDecode
+import VbmLlmProofs.Anthropic.Turn
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -159,7 +160,14 @@ def ledger : List Obligation := [
       "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content"]
     (.proved [``VbmLlm.Anthropic.Request.decode_not_object, ``VbmLlm.Anthropic.reqNat_missing, ``VbmLlm.Anthropic.decodeMsgs_none, ``VbmLlm.Anthropic.decodeMsgs_empty, ``VbmLlm.Anthropic.decodeMsgs_not_array,
       ``VbmLlm.Anthropic.decodeMsg_unsupported_role, ``VbmLlm.Anthropic.decodeReqBlock_unsupported_type, ``VbmLlm.Anthropic.decodeToolPick_unsupported]),
-  O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold and the turn shape over `pair` (the reply decoder, usage, stop reasons and the request codec with its round trip have landed above)"),
+  -- the Anthropic turn shape over `pair`
+  O "anthropic-turn-every-call-is-answered-exactly-once-in-order" ["anthropic-messages-turn:answer-each-call-once", "anthropic-messages:ToolResultBlockParam.tool_use_id", "anthropic-messages:ToolUseBlockParam.input"]
+    (.proved [``VbmLlm.Anthropic.render_paired, ``VbmLlm.Anthropic.ok_renderSegs, ``VbmLlm.Anthropic.joinUser_ok, ``VbmLlm.Anthropic.leadResults_resultsOf, ``VbmLlm.Anthropic.callIds_asstOf]),
+  O "anthropic-turn-window-text-follows-the-results-and-an-orphan-is-text" ["anthropic-messages-turn:window", "anthropic-messages-turn:orphan-is-text", "anthropic-messages-turn:unanswered-placeholder"]
+    (.proved [``VbmLlm.Anthropic.render_window_text_joins, ``VbmLlm.Anthropic.render_orphan, ``VbmLlm.Anthropic.render_unanswered, ``VbmLlm.Anthropic.render_answered]),
+  O "anthropic-turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["anthropic-messages-turn:prefix-stable"]
+    (.proved [``VbmLlm.Anthropic.render_prefix_stable, ``VbmLlm.Anthropic.renderSegs_append, ``VbmLlm.Anthropic.ledBy_pairFrom_none, ``VbmLlm.Anthropic.ledBy_pairFrom_some, ``VbmLlm.Anthropic.joinUser_append]),
+  O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold (the reply decoder, usage, stop reasons, the request codec with its round trip and the turn shape over `pair` have landed above)"),
   -- OpenRouter's variant of the chat profile
   O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
   O "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]
