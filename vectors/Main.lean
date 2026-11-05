@@ -240,6 +240,17 @@ def foldFile (p : FilePath) : IO String := do
   let text ← IO.FS.readFile p
   return VbmLlm.OpenAI.renderOutcome (VbmLlm.OpenAI.foldEvents {} parseData (splitEvents text))
 
+open VbmLlm VbmLlm.OpenAI in
+def renderAnthropicOutcome : Except Anthropic.StreamFault Anthropic.Outcome → String
+  | .ok (.complete r) => "complete\n" ++ renderAnthropic r
+  | .ok (.truncated r) => "truncated\n" ++ renderAnthropic r
+  | .ok (.errorEvent m r) => s!"error event message={optS m}\n" ++ renderAnthropic r
+  | .error f => s!"fault\n{(repr f).pretty}\n"
+
+def foldAnthropicFile (p : FilePath) : IO String := do
+  let text ← IO.FS.readFile p
+  return renderAnthropicOutcome (VbmLlm.Anthropic.foldEvents parseData (splitEvents text))
+
 def listDir (dir : FilePath) (ext : String) : IO (Array FilePath) := do
   if !(← dir.pathExists) then return #[]
   let es ← dir.readDir
@@ -259,7 +270,8 @@ def main (args : List String) : IO UInt32 := do
   let ors ← listDir (dir / "openrouter-chat-error") "json"
   let ars ← listDir (dir / "anthropic-messages-request") "json"
   let ats ← listDir (dir / "anthropic-messages-turn") "json"
-  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty || ans.isEmpty || ors.isEmpty || ars.isEmpty || ats.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
+  let asx ← listDir (dir / "anthropic-messages-stream") "sse"
+  if js.isEmpty || ss.isEmpty || rs.isEmpty || ts.isEmpty || es.isEmpty || ans.isEmpty || ors.isEmpty || ars.isEmpty || ats.isEmpty || asx.isEmpty then IO.eprintln "vbm-llm-vectors: no vectors found"; return 1
   if args.contains "--write" then
     for p in js do IO.FS.writeFile (p.withExtension "expect") (← decodeFile p)
     for p in ss do IO.FS.writeFile (p.withExtension "expect") (← foldFile p)
@@ -270,15 +282,22 @@ def main (args : List String) : IO UInt32 := do
     for p in ors do IO.FS.writeFile (p.withExtension "expect") (← routerErrorFile p)
     for p in ars do IO.FS.writeFile (p.withExtension "expect") (← decodeAnthropicRequestFile p)
     for p in ats do IO.FS.writeFile (p.withExtension "expect") (← renderAnthropicTurnFile p)
-    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size + ans.size + ors.size + ars.size + ats.size} expectations"; return 0
+    for p in asx do IO.FS.writeFile (p.withExtension "expect") (← foldAnthropicFile p)
+    IO.println s!"vbm-llm-vectors: wrote {js.size + ss.size + rs.size + ts.size + es.size + ans.size + ors.size + ars.size + ats.size + asx.size} expectations"; return 0
   let mut bad := 0
-  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) ++ (ans.map (·, 5)) ++ (ors.map (·, 6)) ++ (ars.map (·, 7)) ++ (ats.map (·, 8)) do
-    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else if kind == 4 then errorFile p else if kind == 5 then anthropicFile p else if kind == 6 then routerErrorFile p else if kind == 7 then decodeAnthropicRequestFile p else renderAnthropicTurnFile p
+  for (p, kind) in (js.map (·, 0)) ++ (ss.map (·, 1)) ++ (rs.map (·, 2)) ++ (ts.map (·, 3)) ++ (es.map (·, 4)) ++ (ans.map (·, 5)) ++ (ors.map (·, 6)) ++ (ars.map (·, 7)) ++ (ats.map (·, 8)) ++ (asx.map (·, 9)) do
+    let got ← if kind == 0 then decodeFile p else if kind == 1 then foldFile p else if kind == 2 then decodeRequestFile p else if kind == 3 then renderTurnFile p else if kind == 4 then errorFile p else if kind == 5 then anthropicFile p else if kind == 6 then routerErrorFile p else if kind == 7 then decodeAnthropicRequestFile p else if kind == 8 then renderAnthropicTurnFile p else foldAnthropicFile p
     let ep := p.withExtension "expect"
     if !(← ep.pathExists) then IO.eprintln s!"vbm-llm-vectors: {p}: no expectation"; bad := bad + 1; continue
     if got != (← IO.FS.readFile ep) then IO.eprintln s!"vbm-llm-vectors: {p}: the result differs from {ep}\n{got}"; bad := bad + 1
     if (kind == 3 || kind == 8) && (got.startsWith "ok\nNOT PAIRED" || got.startsWith "ok\nPREFIX UNSTABLE") then
       IO.eprintln s!"vbm-llm-vectors: {p}: the rendering is not well paired or not prefix-stable\n{got}"; bad := bad + 1
+    if kind == 9 then
+      let twin := twinOf p
+      if ← twin.pathExists then
+        let single ← anthropicFile twin
+        if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
+          IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
     if kind == 1 then
       let twin := twinOf p
       if ← twin.pathExists then
@@ -286,7 +305,7 @@ def main (args : List String) : IO UInt32 := do
         -- both render `ok`/`complete` then the same reply lines
         if single.dropWhile (· != '\n') != got.dropWhile (· != '\n') || !got.startsWith "complete\n" then
           IO.eprintln s!"vbm-llm-vectors: {p}: the stream does not fold to the reply of {twin}\n{got}\n{single}"; bad := bad + 1
-  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records, {es.size} failed calls and {ans.size} messages replies and {ors.size} router failed calls and {ars.size} messages requests and {ats.size} messages turn records, {bad} differ"
+  IO.println s!"vbm-llm-vectors: {js.size} replies, {ss.size} streams, {rs.size} requests, {ts.size} turn records, {es.size} failed calls and {ans.size} messages replies and {ors.size} router failed calls and {ars.size} messages requests and {ats.size} messages turn records and {asx.size} messages streams, {bad} differ"
   if args.contains "--selftest" then
     let p := js[0]!
     let want ← IO.FS.readFile (p.withExtension "expect")
@@ -348,5 +367,12 @@ def main (args : List String) : IO UInt32 := do
     let atp := ats[0]!
     let atwant ← IO.FS.readFile (atp.withExtension "expect")
     if (atwant ++ "x") == (← renderAnthropicTurnFile atp) || !atwant.startsWith "ok\n" then IO.eprintln "vbm-llm-vectors: the Anthropic turn check cannot fail"; return 1
+    -- Anthropic streams: a tampered expectation is rejected, a stream that loses its message_stop is truncated, never complete, and a stream folds to the reply its twin decodes to
+    let asp := asx[0]!
+    let aswant ← IO.FS.readFile (asp.withExtension "expect")
+    if (aswant ++ "x") == (← foldAnthropicFile asp) || !aswant.startsWith "complete\n" then IO.eprintln "vbm-llm-vectors: the messages stream check cannot fail (or the first stream is not complete)"; return 1
+    let astext ← IO.FS.readFile asp
+    let ascut := renderAnthropicOutcome (VbmLlm.Anthropic.foldEvents parseData ((splitEvents astext).dropLast))
+    if ascut.startsWith "complete" then IO.eprintln "vbm-llm-vectors: the check cannot fail (a messages stream with no message_stop folds to a complete reply)"; return 1
     IO.println "vbm-llm-vectors: the check rejects tampered rows, missing vectors, a cut stream, a tampered request, a dropped content part, an unpaired turn, a tampered failed call, a cache miscount and a number read as a word"
   return if bad == 0 then 0 else 1

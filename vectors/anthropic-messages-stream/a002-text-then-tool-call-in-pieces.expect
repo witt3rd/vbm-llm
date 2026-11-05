@@ -1,0 +1,6 @@
+complete
+response id="msg_1" model="m" stop="tool_use" class=callsPending sequence=none
+  text "Checking."
+  tool_use id="toolu_1" name="get_weather" input={"city":"Oslo"}
+usage input=25 output=40 read=none write=none
+tokens uncached=25 read=0 write=0 output=40 input_total=25

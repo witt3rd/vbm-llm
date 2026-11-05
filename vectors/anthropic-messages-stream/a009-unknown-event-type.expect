@@ -1,0 +1,2 @@
+fault
+VbmLlm.Anthropic.StreamFault.event 1 { path := [VbmLlm.Step.key "type"], kind := VbmLlm.Kind.unsupported "surprise" }

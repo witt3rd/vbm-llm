@@ -2,12 +2,12 @@
 
 The **wire contract** of the LLM provider conventions, written once in Lean 4 and machine-checked: what a conforming reply is, how its usage numbers add up, why a generation stopped. One adapter per convention, over a neutral core. It is a codec library, not a client: no HTTP, no retries, no authentication, no prices and no model names (a model is an opaque string in a field).
 
-> **Status: pre-release.** Nothing is published to a package registry; build from source. The API may still change. Today the library covers the **reply side of all three conventions**, the **request codec and the tool-call turn machine of OpenAI chat-completions and of Anthropic messages**, and the **OpenAI stream fold**. The Anthropic named-event stream is next (`docs/decisions/0001-vbm-llm.md`, section 6). The scorecard card is linked under [Score](#score).
+> **Status: pre-release.** Nothing is published to a package registry; build from source. The API may still change. Today the library covers the **reply side of all three conventions**, the **request codec and the tool-call turn machine of OpenAI chat-completions and of Anthropic messages**, and the **stream fold of OpenAI and of Anthropic (named events)**. The Anthropic error body is the remaining open piece of that adapter (`docs/decisions/0001-vbm-llm.md`, section 6). The scorecard card is linked under [Score](#score).
 
 | convention | request | response | stream | tool-call turns | usage | finish reasons | error |
 |---|---|---|---|---|---|---|---|
 | OpenAI chat-completions | **encoded, decoded, round trip proved** | **decoded and proved** | **folded, merge rules and terminal rule proved** | **pairing proved** | **arithmetic proved** | **classed, total** | **status class and body proved** |
-| Anthropic messages | **encoded, decoded, round trip proved** | **decoded and proved** | planned | **pairing proved** (one user message of results) | **arithmetic proved** (input excludes the cache) | **classed, total** | planned |
+| Anthropic messages | **encoded, decoded, round trip proved** | **decoded and proved** | **folded, merge rules and terminal rule proved** | **pairing proved** (one user message of results) | **arithmetic proved** (input excludes the cache) | **classed, total** | planned |
 | OpenRouter's variants | the OpenAI one | the OpenAI one | the OpenAI fold (usage and error frames) | the OpenAI one | the OpenAI one | **one more class** | **number-or-word code proved** |
 
 ## What it proves, in plain words
@@ -21,7 +21,7 @@ The specification is the code that runs: `VbmLlm/` imports only Lean's `Init` an
 * **The request codec.** Each field is written as its member, an absent field is left out (never `null`), and `decode (encode r) = r`.
 * **Finish reasons and failed calls** map totally onto closed classes; an unlisted word is kept and classed unknown; the status of a failed call has a class.
 
-**What is not proved** (the ledger's `limit` and `open` claims): that a server sends what its schema says; that tool arguments are valid JSON or fit the tool's parameters; that a clause of the schema is stated faithfully (checked by review); that the parse of the bytes is the RFC 8259 reference (vbm-json's claim, pinned here by revision and hash); that *a stream folds to exactly the single-shot reply* for every interleaving of calls (proved for text and arguments split anywhere, checked on recorded streams; the ledger says it is partial); the Anthropic stream fold (open). The library is a codec: no HTTP, retries, credentials, prices or model names. **The conformance vectors are regression evidence, not proof**: their inputs are the schemas' own examples or built here, none is a recorded reply of a service, and their expectations are the library's own rendering read by a reviewer.
+**What is not proved** (the ledger's `limit` and `open` claims): that a server sends what its schema says; that tool arguments are valid JSON or fit the tool's parameters; that a clause of the schema is stated faithfully (checked by review); that the parse of the bytes is the RFC 8259 reference (vbm-json's claim, pinned here by revision and hash); that *a stream folds to exactly the single-shot reply* for every interleaving of calls (proved for text and arguments split anywhere, checked on recorded streams; the ledger says it is partial); the whole stream-equals-single-shot equality for every interleaving of Anthropic blocks (open). The library is a codec: no HTTP, retries, credentials, prices or model names. **The conformance vectors are regression evidence, not proof**: their inputs are the schemas' own examples or built here, none is a recorded reply of a service, and their expectations are the library's own rendering read by a reviewer.
 
 ## Using it
 

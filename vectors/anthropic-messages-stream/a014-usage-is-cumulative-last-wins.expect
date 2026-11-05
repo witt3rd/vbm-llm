@@ -1,0 +1,5 @@
+complete
+response id="msg_1" model="m" stop="end_turn" class=complete sequence=none
+  text "x"
+usage input=12 output=7 read=4 write=3
+tokens uncached=12 read=4 write=3 output=7 input_total=19

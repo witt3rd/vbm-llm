@@ -1,4 +1,4 @@
-proved 61
-open 2
-total 68
-covered 140
+proved 68
+open 1
+total 76
+covered 152

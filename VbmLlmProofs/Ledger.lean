@@ -12,6 +12,7 @@ import VbmLlmProofs.Anthropic.Request
 import VbmLlmProofs.Anthropic.RequestDecode
 import VbmLlmProofs.Anthropic.Turn
 import VbmLlmProofs.Anthropic.Event
+import VbmLlmProofs.Anthropic.Stream
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
@@ -175,7 +176,24 @@ def ledger : List Obligation := [
   O "anthropic-event-deltas-are-read-as-they-say" ["anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:RawContentBlockDelta.other", "anthropic-messages:RawContentBlockDeltaEvent.index",
       "anthropic-messages:RawContentBlockDeltaEvent.delta", "anthropic-messages:RawContentBlockStartEvent.index", "anthropic-messages:RawContentBlockStartEvent.content_block", "anthropic-messages:RawContentBlockStopEvent.index"]
     (.proved [``VbmLlm.Anthropic.decodeDelta_text, ``VbmLlm.Anthropic.decodeDelta_json, ``VbmLlm.Anthropic.decodeDelta_other, ``VbmLlm.Anthropic.reqIndex_missing]),
-  O "anthropic-messages-adapter" [] (.open_ "the named-event stream fold (the reply decoder, usage, stop reasons, the request codec with its round trip and the turn shape over `pair` have landed above)"),
+  -- the Anthropic stream fold
+  O "anthropic-stream-chunk-boundaries-do-not-matter" ["anthropic-messages-stream:chunk-boundaries", "anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:ThinkingDelta.thinking",
+      "anthropic-messages:SignatureDelta.signature"]
+    (.proved [``VbmLlm.Anthropic.Acc.apply_text, ``VbmLlm.Anthropic.Acc.apply_json, ``VbmLlm.Anthropic.Acc.apply_thinking, ``VbmLlm.Anthropic.Acc.apply_index, ``VbmLlm.Anthropic.mapM_bind_mapM,
+      ``VbmLlm.Anthropic.mapM_indices, ``VbmLlm.Anthropic.mapM_apply_indices, ``VbmLlm.Anthropic.step_delta_split]),
+  O "anthropic-stream-no-message-stop-is-never-complete" ["anthropic-messages-stream:message-stop-is-terminal", "anthropic-messages-stream:truncated-is-never-complete"]
+    (.proved [``VbmLlm.Anthropic.foldWith_no_stop, ``VbmLlm.Anthropic.foldItems_complete, ``VbmLlm.Anthropic.foldWith_plain, ``VbmLlm.Anthropic.foldItems_nil]),
+  O "anthropic-stream-nothing-follows-message-stop" ["anthropic-messages-stream:message-stop-is-terminal"] (.proved [``VbmLlm.Anthropic.foldItems_after_stop]),
+  O "anthropic-stream-error-event-stops-the-fold-with-the-partial-reply" ["anthropic-messages-stream:error-event", "anthropic-messages:ErrorEvent.error"] (.proved [``VbmLlm.Anthropic.foldWith_error_event]),
+  O "anthropic-stream-nothing-but-a-ping-comes-before-message-start" ["anthropic-messages-stream:order"] (.proved [``VbmLlm.Anthropic.foldItems_before_start, ``VbmLlm.Anthropic.foldItems_start_twice]),
+  O "anthropic-stream-usage-and-stop-reason-are-the-last-non-null" ["anthropic-messages:MessageDeltaUsage.counts", "anthropic-messages:RawMessageDeltaEvent.delta.stop_reason", "anthropic-messages:RawMessageDeltaEvent.delta.stop_sequence"]
+    (.proved [``VbmLlm.Anthropic.mergeUsage_later, ``VbmLlm.Anthropic.later_some, ``VbmLlm.Anthropic.later_none, ``VbmLlm.Anthropic.step_msgDelta_stop_reason, ``VbmLlm.Anthropic.step_msgDelta_keeps,
+      ``VbmLlm.Anthropic.step_start_identity]),
+  O "anthropic-stream-a-calls-input-is-parsed-from-its-pieces" ["anthropic-messages-stream:tool-input-from-pieces", "anthropic-messages:ToolUseBlock.input"]
+    (.proved [``VbmLlm.Anthropic.Acc.final_parsed, ``VbmLlm.Anthropic.Acc.final_unparsed, ``VbmLlm.Anthropic.Acc.final_no_pieces]),
+  O "anthropic-stream-fold-equals-single-shot" ["anthropic-messages-stream:chunk-boundaries"]
+    (.partly [``VbmLlm.Anthropic.step_delta_split, ``VbmLlm.Anthropic.Acc.apply_text, ``VbmLlm.Anthropic.Acc.apply_json] "proved: text, thinking and tool-input pieces split anywhere give the state of the unsplit piece, and a complete reply is a `Response` as the single-shot decode yields; checked on recorded streams (`vectors/anthropic-messages-stream/*.single.json`); open: the whole equality for every interleaving of blocks"),
+  O "anthropic-messages-adapter" [] (.partly [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.render_paired, ``VbmLlm.Anthropic.foldItems_complete] "proved: the reply decoder, usage, stop reasons, the request codec with its round trip, the turn shape over `pair` and the named-event stream fold (above); open: the body of a failed call (its error type and message) is not read"),
   -- OpenRouter's variant of the chat profile
   O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
   O "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]

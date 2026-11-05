@@ -14,6 +14,7 @@ import VbmLlm.Anthropic.Request
 import VbmLlm.Anthropic.RequestDecode
 import VbmLlm.Anthropic.Turn
 import VbmLlm.Anthropic.Event
+import VbmLlm.Anthropic.Stream
 import VbmLlm.OpenAI.ApiError
 import VbmLlm.Turn
 import VbmLlm.OpenAI.Turn
