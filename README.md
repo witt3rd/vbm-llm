@@ -42,11 +42,11 @@ match LeanJson.parseFast bytes with
 
 ## Score
 
-The VBM scorecard reads this repository from `scorecard.toml` and prints one card; every number comes from a command, never from a document. The first card, and the registry entry (unscored until the card is current), are in [the VBM repository](https://github.com/witt3rd/vbm) (`docs/cards/vbm-llm-v1.pdf`, one page). Several measures are `not-measurable` today and the card says why (no freestanding export yet, no mutation or comparator run): a metric that cannot be measured counts as a fail, so the card does not pass, and this README does not claim it does.
+The VBM scorecard reads this repository from `scorecard.toml` and prints one card; every number comes from a command, never from a document. The first card, and the registry entry (unscored until the card is current), are in [the VBM repository](https://github.com/witt3rd/vbm). Several measures are `not-measurable` today and the card says why (no freestanding export yet, no mutation or comparator run): a metric that cannot be measured counts as a fail, so the card does not pass, and this README does not claim it does.
 
 ## Build and test
 
-Prerequisites: `git`, [mise](https://mise.jdx.dev), `python3` with PyYAML, a C compiler (`cc`), `coredumpctl` (systemd-coredump: the crash-record gate refuses to skip) and network access for the first fetch (the pinned Lean toolchain and the pinned `vbm-json`); a clean `ubuntu:24.04` with those passes the gate with the network cut after the fetch. Everything runs as `mise exec -- ...` (Lean 4.35.0, pinned in `mise.toml`). `mise exec -- scripts/tier1.sh` is the gate before landing: forbidden constructs, import rule, zero-warning build, the axiom gate, the obligation ledger with its spec-clause tags, the trust ledger, the pinned-library check, the conformance vectors (`vectors/`: the published schema's own examples plus refusals), and the self-tests of the process scripts. Every gate has a negative self-test.
+Prerequisites: `git`, [mise](https://mise.jdx.dev), `python3`, `jq`, a C compiler (`cc`), `coredumpctl` (systemd-coredump: the crash-record gate refuses to skip) and network access for the first fetch (the pinned Lean toolchain and the pinned `vbm-json`); a clean `ubuntu:24.04` with those passes the gate with the network cut after the fetch. Everything runs as `mise exec -- ...` (Lean 4.35.0, pinned in `mise.toml`). `mise exec -- scripts/tier1.sh` is the gate before landing: forbidden constructs, import rule, zero-warning build, the axiom gate, the obligation ledger with its spec-clause tags, the pinned-library check, the conformance vectors (`vectors/`: the published schema's own examples plus refusals), and the self-tests of the process scripts. Every gate has a negative self-test.
 
 ## How it is built
 
@@ -58,4 +58,4 @@ Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Security reports: [SECU
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule, on GitHub-hosted runners only (`scripts/lint-workflows.py` fails Tier 1 on a `self-hosted` runner unless `.github/visibility` says `private`, and on a `pull_request_target` trigger or any secret). No workflow reads a secret. What was checked before the repository went public, and the settings applied, are in `docs/flip-record.md`.
+`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule, on GitHub-hosted runners only. No workflow reads a secret. What was checked before the repository went public, and the settings applied, are in `docs/flip-record.md`.
