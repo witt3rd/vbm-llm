@@ -58,4 +58,4 @@ Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Security reports: [SECU
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule, on GitHub-hosted runners only. No workflow reads a secret. What was checked before the repository went public, and the settings applied, are in `docs/flip-record.md`.
+`.github/workflows/ci.yml` runs Tier 1 on every push to `main` and Tier 2 (the independent proof checkers) on a schedule (and on a manual dispatch), on GitHub-hosted runners only. No workflow reads a secret. What was checked before the repository went public, and the settings applied, are in `docs/flip-record.md`.
