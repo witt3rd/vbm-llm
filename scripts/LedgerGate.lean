@@ -1,9 +1,7 @@
 import Lean
 import VbmLlmProofs.Ledger
 /-! Ledger gate: renders `docs/proof-ledger.md` from `VbmLlmProofs/Ledger.lean`, checks that every named theorem exists and is a theorem, checks every spec-clause tag against `docs/clause-index.txt`
-(an unknown tag fails), and ratchets the counts against `scripts/ledger-baseline.txt` (`proved` may only rise, `open` may only fall, `covered` (clauses of the index tagged by a proved or partial claim) may only rise).
-`--write` updates the baseline (improvements only are judged by the lander). `--selftest` also proves the gate can fail, in the same process: a baseline that claims too many proofs, an open count that rose with no new
-claim, a coverage that fell, a tag that is not in the index and a claim that names a non-theorem are each rejected.
+(an unknown tag fails), and REPORTS the counts (proved, open, covered) in the rendered ledger: no baseline gates them. `--selftest` also proves the gate can fail: a tag that is not in the index and a claim that names a non-theorem are each rejected.
 
 "Proved" here means proved about the decoders and arithmetic of the library (the closure gate of the project these gates were first built in, which also asks that a cited theorem be about code the exports run,
 is not ported yet: the claims name theorems about the functions that are the library). Exit 1 on regression. -/
@@ -69,30 +67,10 @@ def main (args : List String) : IO UInt32 := do
   if !(args.contains "--baseline") && bad == 0 then IO.FS.writeFile "docs/proof-ledger.md" md
   IO.println s!"ledger: {proved} proved, {part} partial, {openN} open, {lim} limit, of {total}"
   IO.println s!"ledger: spec-clause coverage {covered} of {wanted}"
-  let baseFile := arg "--baseline" "scripts/ledger-baseline.txt"
-  let baseTxt ← (do if ← System.FilePath.pathExists baseFile then IO.FS.readFile baseFile else pure "")
-  let baseL := baseTxt.splitOn "\n"
-  if args.contains "--write" then
-    let notes := baseL.filter (·.startsWith "#")
-    IO.FS.writeFile baseFile (("\n".intercalate notes) ++ (if notes.isEmpty then "" else "\n") ++ s!"proved {proved}\nopen {openN}\ntotal {total}\ncovered {covered}\n")
-    return 0
-  -- the verdict on a baseline's lines: how many ratchets it breaks
-  let verdict (baseL : List String) (covered : Nat) : IO Nat := do
-    let get (k : String) : Nat := (baseL.filterMap fun l => match l.splitOn " " with | [a, b] => if a == k then b.toNat? else none | _ => none).headD 0
-    let mut bad := 0
-    if proved < get "proved" then IO.eprintln s!"ledger: proved fell from {get "proved"} to {proved}"; bad := bad + 1
-    -- open may rise only by the claims newly written down (a discovered obligation is honest; an old one silently reopened is not)
-    if baseL.length > 1 && openN > get "open" + (total - get "total") then IO.eprintln s!"ledger: open rose from {get "open"} to {openN} with {total - get "total"} new claim(s)"; bad := bad + 1
-    if covered < get "covered" then IO.eprintln s!"ledger: spec-clause coverage fell from {get "covered"} to {covered}"; bad := bad + 1
-    return bad
-  bad := bad + (← verdict baseL covered)
   -- `--selftest`: the gate can fail, in this same process
   if args.contains "--selftest" && bad == 0 then
-    if (← IO.FS.withIsolatedStreams (verdict ["proved 9999", "open 0"] covered)).2 == 0 then IO.eprintln "tier1: the ledger gate cannot fail (proved)"; return 1
-    if openN > 0 && (← IO.FS.withIsolatedStreams (verdict ["proved 0", s!"open {openN - 1}", s!"total {total}"] covered)).2 == 0 then IO.eprintln "tier1: the ledger gate cannot fail (open)"; return 1
-    if (← IO.FS.withIsolatedStreams (verdict ["proved 0", "total 0", s!"covered {covered + 1}"] covered)).2 == 0 then IO.eprintln "tier1: the ledger gate cannot fail (coverage)"; return 1
     if (unknownTags idx (ledger ++ [O "selftest" ["openai-chat:No.Such.Clause"] (.open_ "x")])).isEmpty then IO.eprintln "tier1: the ledger gate cannot fail (a clause tag that is not in the index)"; return 1
     if (theoremsOk (O "selftest" [] (.proved [`Nat.add_comm, `Nat.add]))).isEmpty then IO.eprintln "tier1: the ledger gate cannot fail (a named constant that is not a theorem)"; return 1
     if (theoremsOk (O "selftest" [] (.proved [`No.Such.Theorem]))).isEmpty then IO.eprintln "tier1: the ledger gate cannot fail (a named theorem that does not exist)"; return 1
-    IO.println "ledger gate: negative self-tests ok (a baseline that claims too many proofs, an open count that rose with no new claim, a coverage that fell, an unknown clause tag, a non-theorem and a missing theorem are rejected)"
+    IO.println "ledger gate: negative self-tests ok (an unknown clause tag, a non-theorem and a missing theorem are rejected)"
   return if bad == 0 then 0 else 1

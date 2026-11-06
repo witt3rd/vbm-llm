@@ -1,3 +1,0 @@
-# <file>	<substring of the flagged line>	<expiry YYYY-MM-DD>	<reason>   (tab-separated; see scripts/lint-proof-eval.sh)
-LeanJsonProofs/Policy.lean	List.replicate 600 0x5B	2027-01-31	evaluates a 600-element list by rfl (well under the 100000 that overflowed nanoda; measured fine); restate over a general k like parseVal_open_brackets, then drop this entry
-LeanJsonProofs/Print.lean	0 * 4096 + 0 * 256	2027-01-31	false positive: 4096 is the hex place value in the surrogate/escape arithmetic of the same declaration (omega, no evaluation of big data)

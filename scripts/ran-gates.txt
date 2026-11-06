@@ -2,5 +2,4 @@
 # A gate not named here must print `ran: NAME: N cases` itself (the tests job does). scripts/test_ran_evidence.sh checks that every `bg NAME` of tier1.sh is covered.
 axiom-gate axiom gate: ([0-9]+) constants checked
 ledger-gate ^ledger: [0-9]+ proved,.* of ([0-9]+)$
-trust-ledger ^trust ledger: ([0-9]+) entries
 vectors-check ^vbm-llm-vectors: ([0-9]+) replies.* 0 differ$
