@@ -1,0 +1,1 @@
+scripts/run-scoped.sh | 9a4c3cdb1817940c1228e3be4e9e2d7182856a8fe02e1505feb7bbdde6ff977b | heavy-host guard refresh of run-scoped.sh from the vbm-land v0.4.1 template | 2026-11-06
