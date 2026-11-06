@@ -1,0 +1,1 @@
+scripts/land/MANIFEST.sha256,scripts/land/PIN,scripts/land/VERSION | 7d9dcfa1e08aa334144eb8911234a12b5997b93eb63abd3410d50cead4346461 | vbm-land v0.4.1 vendored update (signed tag ae7edaa on 3726a9c) | 2026-11-06
