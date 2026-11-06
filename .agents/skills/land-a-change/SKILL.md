@@ -20,12 +20,11 @@ There is exactly one way: `scripts/land-direct` (a stub for the vendored `script
 |---|---|---|
 | 0 | landed | read the push CI (step 6) |
 | 1 | error | the message says why (base kept moving, bad commit subject, over budget): fix, run again |
-| 10 | blocked-red | main is red or unknowable: only a fix or revert may land; see `triage-red` |
 | 11 | conflict | files are named: `git fetch && git rebase origin/main`, resolve, run again |
 | 12 | refused | a hook, the protected-set rule or the drift check refused; read the message; never edit `scripts/land/` |
 | 13 | tier1 | your change fails Tier 1; nothing landed; fix and run again |
 | 14 | held | a hold or freeze is on; see `hold-and-freeze`; do not remove it unless you set it |
-| 15 | busy | another landing holds the lock: just run it again |
+| 16 | moved | main moved faster than the lander could validate; nothing landed; just run it again (a rerun after an accepted push says "already landed" and exits 0) |
 
 6. After exit 0, read the push CI of main and wait for it: `gh run list --workflow ci.yml --branch main --limit 1`, then `gh run watch <id> --exit-status`.
 
@@ -43,7 +42,7 @@ A landing that touches a path of the protected-paths list is refused (exit 12, "
 
 ## What red means
 
-Main is red **only** when the `tier1` job of the latest *push* run on main failed. Tier 2 failures do not make it red. A run that did not finish, or an infrastructure failure (runner never started, network, billing), is not red. If CI cannot be asked, the lander refuses (exit 10): not knowing is not green.
+Main is red when the `tier1` job of a push to it failed on CI. **Red does not stop landing**, and the lander never asks CI: the watchdog (`bin/land-revert`) reverts the commit that made it red and notifies its author, who reproduces in a new worktree and resubmits (`triage-red`). Your landing must not ADD a failure: if its Tier 1 fails with only failures the bare main already has, it lands as "inherited red" (flagged in the metrics line); a new failure refuses it (13). Only a person's hold or freeze (14) stops landing.
 
 ## Do NOT
 
