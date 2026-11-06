@@ -60,9 +60,9 @@ that set of paths:
 - **After Tier 1**: when Tier 1 regenerates generated files, the judge runs again on the tree that would land, so a protected generated path cannot change after the verdict.
 - **Net diff**: a change and its revert inside one landing touch nothing and need nothing.
 - **A revert of a protected change needs the approval too.** A revert that lands protected paths is a protected change like any other: first the approval line (its own landing, announced), then the revert, which removes the line.
-  On a **red or frozen base** only a fix or a revert lands, and the approval landing is neither (it changes only the approvals file), so it is refused as `blocked-red`. The path: the operator runs the approval landing with
-  `LAND_FIX_FOR_RED=1` (treat this change as the fix for a red main; operator environment, not policy), announces it to the judge as always, and then lands the revert (a true `git revert` commit, whose message names the commit it undoes, passes the red check by itself; the red check is not changed by this rule).
-  Nothing about the approval is waived: only the red check is.
+  On a **frozen base** only a fix or a revert lands, and the approval landing is neither (it changes only the approvals file), so it is refused (14). A red main no longer stops anything. The path: the operator runs the approval landing with
+  `LAND_FIX_FOR_RED=1` (treat this change as a fix so it passes the freeze; operator environment, not policy), announces it to the judge as always, and then lands the revert (a true `git revert` commit, whose message names the commit it undoes, passes a freeze by itself).
+  Nothing about the approval is waived: only the freeze is.
 
 ## How to edit a gate line (the author's steps)
 
