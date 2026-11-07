@@ -1,3 +1,4 @@
+import LeanJsonProofs.PrintBytes
 import VbmLlm.OpenAI.Request
 import VbmLlmProofs.OpenAI.Response
 /-! # Proofs about the OpenAI chat-completions request encoder (`VbmLlm/OpenAI/Request.lean`)
@@ -373,5 +374,8 @@ theorem decode_ok_stable (v : Value) (r : Request) (h : Request.decode v = .ok r
   simp only [Request.decodeBody, bind_ok_iff, pure_ok_iff] at h
   obtain ⟨_, _, ms, hms, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
   exact decodeMessages_ne_nil _ _ hms
+
+/-- **The request as bytes is the reference printer's**: `encodeBytes r` is exactly the bytes of `print (encode r)` (from `printBytes_eq`), so everything proved of the printed request holds of these bytes. -/
+theorem Request.encodeBytes_eq (r : Request) : r.encodeBytes = ⟨(LeanJson.print r.encode).toArray⟩ := LeanJson.printBytes_eq r.encode
 
 end VbmLlm.OpenAI

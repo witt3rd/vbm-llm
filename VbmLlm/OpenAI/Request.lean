@@ -1,7 +1,8 @@
+import LeanJson.PrintBytes
 import VbmLlm.OpenAI.Response
 /-! # OpenAI chat-completions: the request of one call
 
-The wire contract of `CreateChatCompletionRequest` (schema pinned in `docs/schemas/openai-chat.md`) as a **typed request** and its encoding to a `LeanJson.Value` (printing the value to bytes is
+The wire contract of `CreateChatCompletionRequest` (schema pinned in `docs/schemas/openai-chat.md`) as a **typed request** and its encoding to a `LeanJson.Value` (printing the value to bytes is `Request.encodeBytes`, equal to
 `LeanJson.print`, proved in `vbm-json` to parse back to it). The typed request carries what a tool-using agent sends: the model (an opaque string), the messages (system, developer, user and tool
 messages as text, assistant messages as text and tool calls), the tool declarations, `tool_choice`, `parallel_tool_calls`, `stream`, `stream_options.include_usage`, the token limits and the two sampling
 numbers. Everything else the schema lists is not modelled (`docs/clause-index.txt` says which).
@@ -110,6 +111,9 @@ def Request.encode (r : Request) : Value :=
     (opt "tool_choice" encodeToolChoice r.toolChoice (opt "parallel_tool_calls" .bool r.parallelToolCalls (opt "stream" .bool r.stream
       (opt "stream_options" (fun b => .obj [("include_usage", .bool b)]) r.includeUsage (opt "max_completion_tokens" (fun n => .num (natNumber n)) r.maxCompletionTokens
         (opt "max_tokens" (fun n => .num (natNumber n)) r.maxTokens (opt "temperature" .num r.temperature (opt "top_p" .num r.topP [])))))))))
+
+/-- **The request as bytes, in one call**: the printed `encode`, written straight into one buffer by `LeanJson.printBytes` (no list of bytes: `encodeBytes_eq` says it is the bytes of the reference printer). -/
+def Request.encodeBytes (r : Request) : ByteArray := LeanJson.printBytes r.encode
 
 /-! ### Decoding: the same typed request, read back (fail closed)
 

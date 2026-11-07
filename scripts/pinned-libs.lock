@@ -2,4 +2,5 @@
 # tree is the pinned library only while the library on disk matches its line here (the lake manifest's rev, the checkout's HEAD, the spec_hash of its spec files). Never edit a line by hand: pin from a real checkout (scripts/pinned-lib.py hash).
 # Every library of this family pins vbm-json to the same revision (lake takes the root's requirement; a diamond needs one agreed rev).
 # NAME REV SPEC_HASH ROOT SPEC_PATHS
-vbm-json 320e4f8fd16330e97282baa75efea256547c357d 7517b9ae7f9792c64e71716085730c75aeb16c7fc6a47018b6bb52d37e9067e6 LeanJson LeanJson/,LeanJson.lean,LeanJsonProofs/Ledger.lean,lakefile.lean,lake-manifest.json,lean-toolchain
+vbm-json c0d7830e775a5af5a41886981973faf7b19032e2 feba16d862e2b11aa40ce4de6b740c88c4d74b3683c90ea910c215440a60ff72 LeanJson LeanJson/,LeanJson.lean,LeanJsonProofs/Ledger.lean,lakefile.lean,lake-manifest.json,lean-toolchain
+vbm-simd 23bb8c6d2db29f373d377177cc8d551c70d13ede c9474fac277e8d982be59d9a0b16f13a0107a2df6adf55fc95641577da1543f6 VbmSimd VbmSimd/,VbmSimd.lean,include/,docs/SPEC.md,docs/trust-ledger.md,lakefile.lean,lake-manifest.json,lean-toolchain

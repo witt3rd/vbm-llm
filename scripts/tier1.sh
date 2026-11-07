@@ -71,6 +71,8 @@ lake env lean -DwarningAsError=true "$st" >/dev/null 2>&1 || { echo "tier1: a cl
 echo "tier1: zero-warning build: negative self-test ok (a file with a warning fails under warningAsError)"
 # The inline check above is the first version (it passes when lake is refused: the defect); scripts/check-zero-warning.sh is the check: the warning's own diagnostic is required, a clean file must pass, it prints `ran: zero-warning: 3 cases`.
 scripts/check-zero-warning.sh
+# vbm-json (from c0d7830) compiles with `-include <its own dir>/.lake/packages/vbm-simd/include/vbm_simd.h`, but as a dependency lake puts its own dependency vbm-simd beside it: link that path to the one lake made (an upstream defect of vbm-json's lakefile).
+lake resolve-deps; mkdir -p .lake/packages/vbm-json/.lake/packages; ln -sfn ../../../vbm-simd .lake/packages/vbm-json/.lake/packages/vbm-simd
 lake build VbmLlm VbmLlmProofs vbm-llm-vectors   # once, for the gates and every test (they build nothing more)
 
 # 2a. The axiom gate: every constant of ours depends only on propext, Classical.choice, Quot.sound (--selftest: a non-standard axiom is rejected).

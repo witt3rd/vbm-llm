@@ -6,7 +6,7 @@ package «vbm-llm» where
 
 /-- The one dependency: the verified JSON codec, pinned to the revision the first consumer pins (every library of the family pins `vbm-json` to the same revision:
 `scripts/pinned-libs.lock` holds its hash, `scripts/pinned-lib.py verify` is the gate). -/
-require «vbm-json» from git "https://github.com/witt3rd/vbm-json.git" @ "320e4f8fd16330e97282baa75efea256547c357d"
+require «vbm-json» from git "https://github.com/witt3rd/vbm-json.git" @ "c0d7830e775a5af5a41886981973faf7b19032e2"
 
 /-- The library: specification and code, one Lean core. Imports `Init`, `LeanJson` (the pin) and itself only (checked by Tier 1). -/
 @[default_target]

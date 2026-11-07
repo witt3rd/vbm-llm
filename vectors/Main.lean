@@ -62,13 +62,13 @@ def decodeRequestFile (p : FilePath) : IO String := do
     match VbmLlm.OpenAI.Request.decode v with
     | .error f => return "error\n" ++ f.render ++ "\n"
     | .ok r =>
-      let canon := ByteArray.mk (LeanJson.print r.encode).toArray
+      let canon := r.encodeBytes
       let text := String.fromUTF8! canon
       match LeanJson.parseFast canon with
       | .error _ => return "round trip FAILED: the encoding is not JSON\n"
       | .ok v2 =>
         match VbmLlm.OpenAI.Request.decode v2 with
-        | .ok r2 => if (LeanJson.print r2.encode) == (LeanJson.print r.encode) then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
+        | .ok r2 => if r2.encodeBytes == r.encodeBytes then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
         | .error _ => return "round trip FAILED: the encoding is refused\n"
 
 /-- An Anthropic request vector: as the OpenAI one, the decoded request is shown as its canonical encoding, which must decode again, from the bytes, to the same canonical text. -/
@@ -80,13 +80,13 @@ def decodeAnthropicRequestFile (p : FilePath) : IO String := do
     match VbmLlm.Anthropic.Request.decode v with
     | .error f => return "error\n" ++ f.render ++ "\n"
     | .ok r =>
-      let canon := ByteArray.mk (LeanJson.print r.encode).toArray
+      let canon := r.encodeBytes
       let text := String.fromUTF8! canon
       match LeanJson.parseFast canon with
       | .error _ => return "round trip FAILED: the encoding is not JSON\n"
       | .ok v2 =>
         match VbmLlm.Anthropic.Request.decode v2 with
-        | .ok r2 => if (LeanJson.print r2.encode) == (LeanJson.print r.encode) then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
+        | .ok r2 => if r2.encodeBytes == r.encodeBytes then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
         | .error _ => return "round trip FAILED: the encoding is refused\n"
 
 /-! The turn-machine vectors: `openai-chat-turn/NAME.json` is a list of recorded items (`{"kind":"text","role",...}`, `{"kind":"turn","content"?,"calls":[{id,name,arguments}]}`, `{"kind":"result","id","content"}`), the expectation is the

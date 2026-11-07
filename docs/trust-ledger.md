@@ -112,3 +112,12 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Owner:** upstream vbm-land (same owner); the pin is in the protected set.
 - **Plan:** verify. Record the release signer in `scripts/land.signers` so installs and updates verify the signature.
 - **Covers:** `file:scripts/land/PIN`
+
+### T11. vbm-simd: the bit-parallel kernels `vbm-json` is built on
+- **What:** the library `vbm-simd` (https://github.com/witt3rd/vbm-simd), a dependency of `vbm-json` that lake pulls in transitively at the revision `vbm-json` pins; its compiled objects are archived with `vbm-json`'s and run inside every parse. Nothing in `VbmLlm` imports it.
+- **Enters:** `lake-manifest.json` (an inherited package), `scripts/pinned-libs.lock`.
+- **Assumes:** the same as T09: the gate checks that the bytes are the bytes at the pinned revision (rev, checkout HEAD, hash of the specification files), never that they were proved; the library's own ledger and trust ledger carry its proofs and its trusted shim header.
+- **Test:** scripts/test_pinned_lib.sh (as T09: a stale revision, an edited spec file, a fork, an unlocked package each fail).
+- **Owner:** the owner (the lock is a protected path); upstream vbm-simd is the same owner's.
+- **Plan:** verify. As T09.
+- **Covers:** `pin:vbm-simd`

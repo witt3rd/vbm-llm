@@ -1,8 +1,9 @@
+import LeanJson.PrintBytes
 import VbmLlm.OpenAI.Request
 /-! # Anthropic messages: the request of one call
 
 The wire contract of `MessageCreateParams` (the same pinned type document as the reply: `docs/schemas/anthropic-messages.md`) as a **typed request** and its encoding to a `LeanJson.Value`
-(printing is `LeanJson.print`). What differs from the OpenAI request is the convention: `max_tokens` is **required**, the system prompt is a member of the request (not a message), a message
+(printing is `Request.encodeBytes`, the bytes of `LeanJson.print`). What differs from the OpenAI request is the convention: `max_tokens` is **required**, the system prompt is a member of the request (not a message), a message
 is a role (`user` or `assistant`) and an **array of typed blocks**, a tool call is a `tool_use` block of the assistant and its answer a `tool_result` block (the first blocks of the next user message),
 a tool declares an `input_schema`. Content is modelled as text only (an image or a document block is not modelled yet); the model name is an opaque string.
 
@@ -92,5 +93,8 @@ def Request.encode (r : Request) : Value :=
     opt "system" .str r.system (opt "tools" (fun ts => .arr (ts.map encodeTool)) (match r.tools with | [] => none | ts => some ts)
       (opt "tool_choice" encodeToolChoice r.toolChoice (opt "stream" .bool r.stream (opt "temperature" .num r.temperature (opt "top_p" .num r.topP
         (opt "top_k" (fun n => .num (natNumber n)) r.topK (opt "stop_sequences" (fun ss => .arr (ss.map .str)) (match r.stopSequences with | [] => none | ss => some ss) []))))))))
+
+/-- **The request as bytes, in one call**: the printed `encode`, written straight into one buffer by `LeanJson.printBytes` (no list of bytes: `encodeBytes_eq` says it is the bytes of the reference printer). -/
+def Request.encodeBytes (r : Request) : ByteArray := LeanJson.printBytes r.encode
 
 end VbmLlm.Anthropic

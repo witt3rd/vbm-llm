@@ -95,6 +95,7 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.OpenAI.decode_encode, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessage, ``VbmLlm.OpenAI.decodeTool_encodeTool, ``VbmLlm.OpenAI.decodeMessages_encode, ``VbmLlm.OpenAI.decodeTools_encode,
       ``VbmLlm.OpenAI.decodeToolChoice_encode, ``VbmLlm.OpenAI.decodeIncludeUsage_encode, ``VbmLlm.OpenAI.decodeEach_encode, ``VbmLlm.OpenAI.decodeToolCalls_encode, ``VbmLlm.OpenAI.optBool_orNull,
       ``VbmLlm.OpenAI.optNat_orNull, ``VbmLlm.OpenAI.optNum_orNull]),
+  O "openai-request-bytes-are-the-reference-print" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.Request.encodeBytes_eq]),
   O "openai-request-what-decodes-is-written-back-the-same" ["openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.decode_ok_stable, ``VbmLlm.OpenAI.decodeMessages_ne_nil, ``VbmLlm.OpenAI.decodeEach_cons_ne_nil]),
   O "openai-request-decode-fails-closed" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.stream"]
     (.proved [``VbmLlm.OpenAI.Request.decode_not_object, ``VbmLlm.OpenAI.decodeMessages_none, ``VbmLlm.OpenAI.decodeMessages_empty, ``VbmLlm.OpenAI.decodeMessages_not_array,
@@ -167,6 +168,7 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.decodeReqBlock_encodeBlock, ``VbmLlm.Anthropic.decodeMsg_encodeMessage, ``VbmLlm.Anthropic.decodeToolDecl_encodeTool,
       ``VbmLlm.Anthropic.decodeMsgs_encode, ``VbmLlm.Anthropic.decodeToolDecls_encode, ``VbmLlm.Anthropic.decodeToolPick_encode, ``VbmLlm.Anthropic.decodeStops_encode,
       ``VbmLlm.Anthropic.optStr_orNull, ``VbmLlm.Anthropic.reqNat_natNumber]),
+  O "anthropic-request-bytes-are-the-reference-print" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.messages"] (.proved [``VbmLlm.Anthropic.Request.encodeBytes_eq]),
   O "anthropic-request-what-decodes-is-written-back-the-same" ["anthropic-messages:MessageCreateParams.messages"]
     (.proved [``VbmLlm.Anthropic.decode_ok_stable, ``VbmLlm.Anthropic.decodeMsgs_ne_nil]),
   O "anthropic-request-decode-fails-closed" ["anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.tool_choice",

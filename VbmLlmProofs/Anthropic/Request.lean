@@ -103,4 +103,7 @@ theorem encodeBlock_toolResult (i : String) (c : Option String) (e : Option Bool
     get (encodeBlock (.toolResult i c e)) "is_error" = orNull .bool e := by
   cases c <;> cases e <;> simp [encodeBlock, get, lookup, go, opt, orNull]
 
+/-- **The request as bytes is the reference printer's**: `encodeBytes r` is exactly the bytes of `print (encode r)` (from `printBytes_eq`). -/
+theorem Request.encodeBytes_eq (r : Request) : r.encodeBytes = ⟨(LeanJson.print r.encode).toArray⟩ := LeanJson.printBytes_eq r.encode
+
 end VbmLlm.Anthropic
