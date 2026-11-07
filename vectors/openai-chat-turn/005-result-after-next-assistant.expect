@@ -1,2 +1,2 @@
 ok
-[{"role":"user","content":"go"},{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"[no result]"},{"role":"assistant","content":"giving up"},{"role":"user","content":"[tool result] too late"}]
+[{"role":"user","content":"go"},{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"[no result]"},{"role":"assistant","content":"giving up"},{"role":"user","content":"[tool result] too late"}]

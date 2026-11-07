@@ -4,7 +4,7 @@ import VbmLlmProofs.OpenAI.Response
 
 * **A count is written as a plain natural** (`natOf_natNumber`): reading the lexeme back gives the count, for every natural.
 * **What the encoding says, member by member** (`encode_get_*`): each member of the encoded request is the value of its field, and a member whose field is absent is absent (null); an encoded request
-  is an object. No member is ever written as `null`.
+  is an object. No member of the request object is ever written as `null` (inside a message, an assistant message with calls and no text is written with `"content": null`: `encodeMessage_assistant_calls_no_text`).
 * **A tool call is written the way the response decoder reads it** (`decodeToolCall_encodeToolCall`): the id, the name and the arguments verbatim. -/
 namespace VbmLlm.OpenAI
 open LeanJson
@@ -177,7 +177,7 @@ theorem cons_not_null {k : String} {v : Value} {rest : List (String × Value)} (
   · exact hv
   · exact hr p h2
 
-/-- **No member of an encoded request is `null`**: an absent field is left out, never written as `null`. -/
+/-- **No member of an encoded request object is `null`**: an absent field is left out, never written as `null` (the one `null` is inside a message: `encodeMessage_assistant_calls_no_text`). -/
 theorem encode_members_not_null (r : Request) (ms : List (String × Value)) (h : r.encode = .obj ms) : ∀ p ∈ ms, p.2 ≠ .null := by
   unfold Request.encode at h
   cases h
@@ -218,7 +218,12 @@ theorem decodeReqMessage_encodeMessage (m : RequestMessage) : decodeReqMessage (
     cases cs with
     | nil => cases c <;> simp [encodeMessage, decodeReqMessage, reqStr, optStr, decodeCalls, opt, get, lookup, go, bind, Except.bind, pure, Except.pure]
     | cons x xs =>
-      cases c <;> simp [encodeMessage, decodeReqMessage, reqStr, optStr, decodeCalls, opt, get, lookup, go, underStep, decodeToolCalls_encode_cons, bind, Except.bind, pure, Except.pure]
+      cases c <;> simp [encodeMessage, orNullStr, decodeReqMessage, reqStr, optStr, decodeCalls, get, lookup, go, underStep, decodeToolCalls_encode_cons, bind, Except.bind, pure, Except.pure]
+
+/-- An assistant message with tool calls and no text is written with `"content": null` (the decoder reads it back as no text: `decodeReqMessage_encodeMessage`). -/
+theorem encodeMessage_assistant_calls_no_text (x : ToolCall) (xs : List ToolCall) :
+    get (encodeMessage (.assistant none (x :: xs))) "content" = .null := by
+  simp [encodeMessage, orNullStr, get, lookup, go]
 
 /-- The `function` object of an encoded tool, member by member. -/
 theorem tool_fn_get (t : Tool) :

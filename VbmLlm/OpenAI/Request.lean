@@ -6,7 +6,7 @@ The wire contract of `CreateChatCompletionRequest` (schema pinned in `docs/schem
 messages as text, assistant messages as text and tool calls), the tool declarations, `tool_choice`, `parallel_tool_calls`, `stream`, `stream_options.include_usage`, the token limits and the two sampling
 numbers. Everything else the schema lists is not modelled (`docs/clause-index.txt` says which).
 
-Encoding rules (each a theorem in `VbmLlmProofs/OpenAI/Request.lean`): a member that is `none` (or an empty `tools` list, or an assistant message with no calls) is **left out**, never written as `null`;
+Encoding rules (each a theorem in `VbmLlmProofs/OpenAI/Request.lean`): a member of the request that is `none` (or an empty `tools` list, or an assistant message with no calls and no text) is **left out**, never written as `null`, with one exception: an assistant message that has tool calls and no text is written with `"content": null`;
 a tool call's arguments are written verbatim; a count is written as a plain natural. No client behaviour: the model name is not looked at, nothing says which fields a provider honours. -/
 namespace VbmLlm.OpenAI
 open LeanJson
@@ -81,12 +81,17 @@ def opt {α : Type} (k : String) (f : α → Value) : Option α → List (String
 def encodeToolCall (c : ToolCall) : Value :=
   .obj [("id", .str c.id), ("type", .str "function"), ("function", .obj [("name", .str c.name), ("arguments", .str c.arguments)])]
 
+/-- An assistant message's text, or `null` when there is none (a provider may refuse a message with calls and no `content` member). -/
+def orNullStr : Option String → Value
+  | none => .null
+  | some s => .str s
+
 def encodeMessage : RequestMessage → Value
   | .system c => .obj [("role", .str "system"), ("content", .str c)]
   | .developer c => .obj [("role", .str "developer"), ("content", .str c)]
   | .user c => .obj [("role", .str "user"), ("content", .str c)]
   | .assistant c [] => .obj (("role", .str "assistant") :: opt "content" .str c [])
-  | .assistant c cs => .obj (("role", .str "assistant") :: opt "content" .str c [("tool_calls", .arr (cs.map encodeToolCall))])
+  | .assistant c cs => .obj (("role", .str "assistant") :: ("content", orNullStr c) :: [("tool_calls", .arr (cs.map encodeToolCall))])
   | .tool i c => .obj [("role", .str "tool"), ("tool_call_id", .str i), ("content", .str c)]
 
 def encodeTool (t : Tool) : Value :=

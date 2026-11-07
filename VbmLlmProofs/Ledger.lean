@@ -85,6 +85,7 @@ def ledger : List Obligation := [
       ``VbmLlm.OpenAI.encode_get_stream, ``VbmLlm.OpenAI.encode_get_stream_options, ``VbmLlm.OpenAI.encode_get_max_completion_tokens, ``VbmLlm.OpenAI.encode_get_max_tokens, ``VbmLlm.OpenAI.encode_get_temperature,
       ``VbmLlm.OpenAI.encode_get_top_p, ``VbmLlm.OpenAI.encode_object]),
   O "openai-request-an-absent-field-is-left-out-never-null" ["openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.max_completion_tokens"] (.proved [``VbmLlm.OpenAI.encode_members_not_null, ``VbmLlm.OpenAI.mem_opt]),
+  O "openai-request-assistant-calls-no-text-content-null" ["openai-chat:ChatCompletionRequestAssistantMessage.content"] (.proved [``VbmLlm.OpenAI.encodeMessage_assistant_calls_no_text]),
   O "openai-request-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens"] (.proved [``VbmLlm.OpenAI.natOf_natNumber, ``VbmLlm.OpenAI.leadRest_val]),
   O "openai-request-tool-calls-are-written-as-read" ["openai-chat:ChatCompletionRequestAssistantMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeToolCall_encodeToolCall]),
   O "openai-request-codec-round-trip" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestDeveloperMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content",

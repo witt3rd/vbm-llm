@@ -1,2 +1,2 @@
 ok
-[{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"one"},{"role":"user","content":"[tool result] stray"}]
+[{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"one"},{"role":"user","content":"[tool result] stray"}]

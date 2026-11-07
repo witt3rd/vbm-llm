@@ -61,7 +61,7 @@ openai-chat CreateChatCompletionRequest.messages read array of messages; require
 openai-chat ChatCompletionRequestSystemMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
 openai-chat ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
 openai-chat ChatCompletionRequestUserMessage.content policy text only: the string form of `content` (the array of text, image, audio and file parts is not modelled)
-openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present and left out when the turn is only tool calls (the schema's null is never written)
+openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present; when the turn is only tool calls it is written as null (some providers refuse the member left out); with no text and no calls it is left out
 openai-chat ChatCompletionRequestAssistantMessage.tool_calls read the calls as the provider sent them (id, `function` type, name, arguments verbatim); left out when there are none
 openai-chat ChatCompletionRequestToolMessage.tool_call_id read string; the id of the call this message answers
 openai-chat ChatCompletionRequestToolMessage.content policy text only: the string form of `content`

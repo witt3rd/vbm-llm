@@ -1,2 +1,2 @@
 ok
-[{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"[no result]"},{"role":"assistant","tool_calls":[{"id":"c2","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c2","content":"two"},{"role":"user","content":"[tool result] one"}]
+[{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":"[no result]"},{"role":"assistant","content":null,"tool_calls":[{"id":"c2","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c2","content":"two"},{"role":"user","content":"[tool result] one"}]
