@@ -14,6 +14,8 @@ Reading rules (the policy, stated once; each is a theorem in `VbmLlmProofs/OpenA
   refused as unsupported, not read as a function call); `arguments` is kept **verbatim as the model wrote it**: JSON text the model may have got wrong, never parsed here (the schema says so itself);
 * a finish reason is kept as the provider's text; `FinishClass.ofWire` (`Finish.lean`) classes it;
 * usage counts are plain naturals when present (a sign, a fraction, an exponent or a string is refused); absent counts stay absent, they are not 0;
+* the model's **reasoning text** is the message's `reasoning` member (OpenRouter's) or its `reasoning_content` member (the other compatible servers'): the first of the two that is present, each of them a string when
+  present; the served **provider** is the reply's `provider` member (OpenRouter names the upstream that served the call): an opaque string, read when present, never looked at;
 * unread fields (`logprobs`, `system_fingerprint`, `created`, `service_tier`, annotations, audio, ...) are ignored. -/
 namespace VbmLlm.OpenAI
 open LeanJson
@@ -39,6 +41,8 @@ structure Message where
   content : Option String
   refusal : Option String
   toolCalls : List ToolCall
+  /-- the model's reasoning text, verbatim -/
+  reasoning : Option String
   deriving DecidableEq, Repr
 
 structure Choice where
@@ -54,6 +58,8 @@ structure Response where
   model : Option String
   choices : List Choice
   usage : Option Usage
+  /-- the upstream provider the router says served the call: an opaque string -/
+  provider : Option String
   deriving DecidableEq, Repr
 
 /-! ### Field readers: absent or `null` is `none`, a present value must have its type -/
@@ -64,6 +70,12 @@ def optStr (o : Value) (k : String) : Except Fault (Option String) :=
   | .null => .ok none
   | .str s => .ok (some s)
   | _ => .error { path := [.key k], kind := .wrongType .string }
+
+/-- The reasoning text of a message or a delta: `reasoning`, else `reasoning_content`; each, when present, must be a string. -/
+def optReasoning (o : Value) : Except Fault (Option String) := do
+  let a ← optStr o "reasoning"
+  let b ← optStr o "reasoning_content"
+  pure (match a with | some _ => a | none => b)
 
 /-- An optional natural member. -/
 def optNat (o : Value) (k : String) : Except Fault (Option Nat) :=
@@ -139,7 +151,8 @@ def decodeMessage (m : Value) : Except Fault Message := do
   let content ← optStr m "content"
   let refusal ← optStr m "refusal"
   let toolCalls ← decodeCalls m
-  pure { content, refusal, toolCalls }
+  let reasoning ← optReasoning m
+  pure { content, refusal, toolCalls, reasoning }
 
 def decodeChoice (c : Value) : Except Fault Choice :=
   match c with
@@ -192,7 +205,8 @@ def decode (v : Value) : Except Fault Response :=
     let model ← optStr v "model"
     let choices ← decodeChoicesField v
     let usage ← decodeUsageOpt v
-    pure { id, model, choices, usage }
+    let provider ← optStr v "provider"
+    pure { id, model, choices, usage, provider }
   | _ => .error (Fault.here (.wrongType .object))
 
 end VbmLlm.OpenAI

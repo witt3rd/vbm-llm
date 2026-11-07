@@ -25,7 +25,7 @@ def Choice.render (c : Choice) : String :=
     | none => "none"
     | some w => (FinishClass.ofOpenAI w).name
   String.intercalate "\n" (
-    [s!"choice index={optN c.index} finish={optS c.finishReason} class={cls}", s!"  content {optS c.message.content}", s!"  refusal {optS c.message.refusal}"] ++
+    [s!"choice index={optN c.index} finish={optS c.finishReason} class={cls}", s!"  content {optS c.message.content}", s!"  refusal {optS c.message.refusal}", s!"  reasoning {optS c.message.reasoning}"] ++
     c.message.toolCalls.map ToolCall.render)
 
 def Usage.render (u : Usage) : String :=
@@ -37,7 +37,7 @@ def Usage.render (u : Usage) : String :=
 
 def Response.render (r : Response) : String :=
   String.intercalate "\n" (
-    [s!"response id={optS r.id} model={optS r.model}"] ++ r.choices.map Choice.render ++
+    [s!"response id={optS r.id} model={optS r.model} provider={optS r.provider}"] ++ r.choices.map Choice.render ++
     (match r.usage with | none => ["usage none"] | some u => [u.render]))
 
 /-- `ok` and the rendering, or `error` and the refusal. -/

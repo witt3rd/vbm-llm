@@ -1,0 +1,10 @@
+data: {"id":"chatcmpl-9","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":"Two "},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{"content":null,"reasoning_content":"and two."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{"content":"4"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9","object":"chat.completion.chunk","created":1,"model":"m","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+

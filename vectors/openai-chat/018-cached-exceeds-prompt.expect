@@ -1,7 +1,8 @@
 ok
-response id=none model=none
+response id=none model=none provider=none
 choice index=none finish=none class=none
   content "x"
   refusal none
+  reasoning none
 usage prompt=10 completion=none total=none cached=11 reasoning=none
 tokens refused cachedExceedsPrompt prompt=10 cached=11

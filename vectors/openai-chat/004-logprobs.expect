@@ -1,7 +1,8 @@
 ok
-response id="chatcmpl-123" model="gpt-4o-mini"
+response id="chatcmpl-123" model="gpt-4o-mini" provider=none
 choice index=0 finish="stop" class=complete
   content "Hello! How can I assist you today?"
   refusal none
+  reasoning none
 usage prompt=9 completion=9 total=18 cached=none reasoning=0
 tokens uncached=9 read=0 write=0 output=9 reasoning=0

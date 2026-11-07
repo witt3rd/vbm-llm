@@ -1,7 +1,8 @@
 ok
-response id="chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT" model="gpt-4.1-2025-04-14"
+response id="chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT" model="gpt-4.1-2025-04-14" provider=none
 choice index=0 finish="stop" class=complete
   content "Hello! How can I assist you today?"
   refusal none
+  reasoning none
 usage prompt=19 completion=10 total=29 cached=0 reasoning=0
 tokens uncached=19 read=0 write=0 output=10 reasoning=0

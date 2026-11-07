@@ -1,7 +1,8 @@
 ok
-response id=none model=none
+response id=none model=none provider=none
 choice index=0 finish="length" class=truncated
   content none
   refusal none
+  reasoning none
   call id="c1" name="write" arguments="{\"path\":\"a\",\"text\":\"abc"
 usage none

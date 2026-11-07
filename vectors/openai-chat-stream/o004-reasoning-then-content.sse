@@ -1,0 +1,16 @@
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"The user asks","reasoning_details":[{"type":"reasoning.text","text":"The user asks","signature":null,"id":"reasoning-text-1","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":" for 2+2. "},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"That is 4."},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":"The answer "},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":"is 4."},"finish_reason":"stop","native_finish_reason":"stop"}]}
+
+data: {"id":"gen-r1","object":"chat.completion.chunk","created":1,"model":"deepseek/deepseek-r1","provider":"Together","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}],"usage":{"prompt_tokens":9,"completion_tokens":14,"total_tokens":23,"completion_tokens_details":{"reasoning_tokens":9}}}
+
+data: [DONE]
+

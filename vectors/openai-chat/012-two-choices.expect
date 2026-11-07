@@ -1,9 +1,11 @@
 ok
-response id="x" model="m"
+response id="x" model="m" provider=none
 choice index=0 finish="stop" class=complete
   content "a"
   refusal none
+  reasoning none
 choice index=1 finish="length" class=truncated
   content "b"
   refusal none
+  reasoning none
 usage none

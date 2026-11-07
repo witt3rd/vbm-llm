@@ -9,8 +9,8 @@ A stream of events folds to **exactly one outcome**; the outcome is never a sile
 * `errorChunk`: a chunk carried an `error` (OpenRouter's mid-stream error: HTTP 200, content already received, then an error). The fold stops there and hands over the message **and** the partial reply: whether to
   discard what was received is the consumer's decision, not the library's.
 
-Merge rules (the contract, proved in `VbmLlmProofs/OpenAI/Stream.lean`): the first `id` and `model` seen win; the last non-null `usage` wins; a choice is keyed by its `index`, in order of first appearance;
-`content` and `refusal` concatenate in order; a tool call is keyed by its `index` within its choice, the **first** `id` and `name` win and `arguments` concatenate in order; the last `finish_reason` wins.
+Merge rules (the contract, proved in `VbmLlmProofs/OpenAI/Stream.lean`): the first `id`, `model` and `provider` seen win; the last non-null `usage` wins; a choice is keyed by its `index`, in order of first appearance;
+`content`, `refusal` and `reasoning` concatenate in order; a tool call is keyed by its `index` within its choice, the **first** `id` and `name` win and `arguments` concatenate in order; the last `finish_reason` wins.
 A tool-call fragment with no `index` is a fault unless the policy reads it as 0 (`Policy.missingIndexIsZero`, off by default: the schema requires it). An event with a type other than the default, or one
 that follows the sentinel, is a fault. An event with empty data is ignored. A completed tool call with no `id` or no `name` is a fault, and so is a sentinel that follows no choice at all: a `complete` reply always has a choice, as the single-shot decode requires. -/
 namespace VbmLlm.OpenAI
@@ -34,6 +34,7 @@ structure ChoiceAcc where
   refusal : Option String
   calls : List CallAcc
   finish : Option String
+  reasoning : Option String
   deriving DecidableEq, Repr
 
 structure State where
@@ -41,9 +42,10 @@ structure State where
   model : Option String
   choices : List ChoiceAcc
   usage : Option Usage
+  provider : Option String
   deriving DecidableEq, Repr
 
-def State.empty : State := ⟨none, none, [], none⟩
+def State.empty : State := ⟨none, none, [], none, none⟩
 
 /-- Append a piece to an optional text (`none` + piece = the piece). -/
 def appendOpt (a : Option String) (b : Option String) : Option String :=
@@ -68,7 +70,7 @@ def mergeCall (c : CallAcc) (d : ToolCallDelta) : CallAcc :=
   { c with id := firstOpt c.id d.id, name := firstOpt c.name d.name, arguments := c.arguments ++ d.arguments.getD "" }
 
 def newCall (i : Nat) : CallAcc := ⟨i, none, none, ""⟩
-def newChoice (i : Nat) : ChoiceAcc := ⟨i, none, none, [], none⟩
+def newChoice (i : Nat) : ChoiceAcc := ⟨i, none, none, [], none, none⟩
 
 /-- Apply the tool-call fragments of a delta, one at a time, in order. A fragment with no index is `none`: the caller decides. -/
 def applyCall (calls : List CallAcc) (d : ToolCallDelta) (i : Nat) : List CallAcc :=
@@ -85,7 +87,7 @@ def applyChoice (pol : Policy) (a : ChoiceAcc) (c : ChunkChoice) : Option Choice
   match applyCalls pol a.calls c.delta.toolCalls with
   | none => none
   | some calls =>
-    some { a with content := appendOpt a.content c.delta.content, refusal := appendOpt a.refusal c.delta.refusal, calls,
+    some { a with content := appendOpt a.content c.delta.content, refusal := appendOpt a.refusal c.delta.refusal, reasoning := appendOpt a.reasoning c.delta.reasoning, calls,
                   finish := match c.finishReason with | some f => some f | none => a.finish }
 
 /-- Why a chunk's choice has no usable index. -/
@@ -111,7 +113,7 @@ def applyChunk (pol : Policy) (s : State) (c : Chunk) : Option State :=
   match applyChoices pol s.choices c.choices with
   | none => none
   | some choices =>
-    some { id := firstOpt s.id c.id, model := firstOpt s.model c.model, choices,
+    some { id := firstOpt s.id c.id, model := firstOpt s.model c.model, provider := firstOpt s.provider c.provider, choices,
            usage := match c.usage with | some u => some u | none => s.usage }
 
 /-! ### From the state to a reply -/
@@ -119,10 +121,10 @@ def applyChunk (pol : Policy) (s : State) (c : Chunk) : Option State :=
 def CallAcc.soFar (c : CallAcc) : ToolCall := ⟨c.id.getD "", c.name.getD "", c.arguments⟩
 
 def ChoiceAcc.soFar (a : ChoiceAcc) : Choice :=
-  ⟨some a.index, ⟨a.content, a.refusal, a.calls.map CallAcc.soFar⟩, a.finish⟩
+  ⟨some a.index, ⟨a.content, a.refusal, a.calls.map CallAcc.soFar, a.reasoning⟩, a.finish⟩
 
 /-- The reply so far, with an unnamed tool call read as empty strings: **only for a truncated or errored stream, never to be executed**. -/
-def State.soFar (s : State) : Response := ⟨s.id, s.model, s.choices.map ChoiceAcc.soFar, s.usage⟩
+def State.soFar (s : State) : Response := ⟨s.id, s.model, s.choices.map ChoiceAcc.soFar, s.usage, s.provider⟩
 
 /-- A completed call has its identity. -/
 def CallAcc.complete? (c : CallAcc) : Bool := c.id.isSome && c.name.isSome

@@ -132,14 +132,32 @@ theorem decodeCalls_ok_iff (m : Value) (cs : List ToolCall) :
 
 /-! ### Messages and choices -/
 
+/-- The reasoning text is `reasoning`, else `reasoning_content`; each, when present, is a string. -/
+theorem optReasoning_ok_iff (o : Value) (r : Option String) :
+    optReasoning o = .ok r ↔ ∃ a b, optStr o "reasoning" = .ok a ∧ optStr o "reasoning_content" = .ok b ∧ r = (match a with | some _ => a | none => b) := by
+  simp only [optReasoning, bind_ok_iff, pure_ok_iff]
+  constructor
+  · rintro ⟨a, ha, b, hb, h⟩; exact ⟨a, b, ha, hb, h.symm⟩
+  · rintro ⟨a, b, ha, hb, h⟩; exact ⟨a, ha, b, hb, h.symm⟩
+
+/-- A present `reasoning` or `reasoning_content` that is not a string is refused, never coerced. -/
+theorem optReasoning_wrong (o : Value) (k : String) (hk : k = "reasoning" ∨ k = "reasoning_content") (h : ∀ s, get o k ≠ .str s) (h' : get o k ≠ .null) (r : Option String) :
+    optReasoning o ≠ .ok r := by
+  intro hc; rw [optReasoning_ok_iff] at hc
+  obtain ⟨a, b, ha, hb, _⟩ := hc
+  rcases hk with rfl | rfl
+  · rw [optStr_wrong o _ h h'] at ha; cases ha
+  · rw [optStr_wrong o _ h h'] at hb; cases hb
+
 theorem decodeMessage_ok_iff (m : Value) (r : Message) :
-    decodeMessage m = .ok r ↔ optStr m "content" = .ok r.content ∧ optStr m "refusal" = .ok r.refusal ∧ decodeCalls m = .ok r.toolCalls := by
+    decodeMessage m = .ok r ↔ optStr m "content" = .ok r.content ∧ optStr m "refusal" = .ok r.refusal ∧ decodeCalls m = .ok r.toolCalls ∧
+      optReasoning m = .ok r.reasoning := by
   cases r with
-  | mk content refusal toolCalls =>
+  | mk content refusal toolCalls reasoning =>
     simp only [decodeMessage, bind_ok_iff, pure_ok_iff]
     constructor
-    · rintro ⟨a, ha, b, hb, c, hc, h⟩; cases h; exact ⟨ha, hb, hc⟩
-    · rintro ⟨ha, hb, hc⟩; exact ⟨_, ha, _, hb, _, hc, rfl⟩
+    · rintro ⟨a, ha, b, hb, c, hc, d, hd, h⟩; cases h; exact ⟨ha, hb, hc, hd⟩
+    · rintro ⟨ha, hb, hc, hd⟩; exact ⟨_, ha, _, hb, _, hc, _, hd, rfl⟩
 
 theorem decodeChoice_ok_iff (c : Value) (r : Choice) :
     decodeChoice c = .ok r ↔ (∃ ms, c = .obj ms) ∧ optNat c "index" = .ok r.index ∧ optStr c "finish_reason" = .ok r.finishReason ∧
@@ -199,20 +217,21 @@ theorem decodeChoicesField_ok_iff (v : Value) (cs : List Choice) :
   | arr xs => cases xs <;> simp [underStep_ok, decodeChoices_ok_iff]
   | _ => simp
 
-/-- **The whole contract in one statement.** A value decodes to `r` exactly when it is an object, its optional `id` and `model` are strings or absent, its `choices` is a non-empty array every member of which
+/-- **The whole contract in one statement.** A value decodes to `r` exactly when it is an object, its optional `id`, `model` and `provider` are strings or absent, its `choices` is a non-empty array every member of which
 decodes (to `r.choices`, member by member), and its `usage` is absent or decodes (to `r.usage`). -/
 theorem decode_ok_iff (v : Value) (r : Response) :
     decode v = .ok r ↔
       (∃ ms, v = .obj ms) ∧ optStr v "id" = .ok r.id ∧ optStr v "model" = .ok r.model ∧
-      (∃ xs, get v "choices" = .arr xs ∧ xs ≠ [] ∧ Each (fun x c => decodeChoice x = .ok c) xs r.choices) ∧ decodeUsageOpt v = .ok r.usage := by
+      (∃ xs, get v "choices" = .arr xs ∧ xs ≠ [] ∧ Each (fun x c => decodeChoice x = .ok c) xs r.choices) ∧ decodeUsageOpt v = .ok r.usage ∧
+      optStr v "provider" = .ok r.provider := by
   cases v with
   | obj ms =>
     cases r with
-    | mk id model choices usage =>
+    | mk id model choices usage provider =>
       simp only [decode, bind_ok_iff, pure_ok_iff, decodeChoicesField_ok_iff]
       constructor
-      · rintro ⟨a, ha, b, hb, c, hc, d, hd, h⟩; cases h; exact ⟨⟨_, rfl⟩, ha, hb, hc, hd⟩
-      · rintro ⟨_, ha, hb, hc, hd⟩; exact ⟨_, ha, _, hb, _, hc, _, hd, rfl⟩
+      · rintro ⟨a, ha, b, hb, c, hc, d, hd, e, he, h⟩; cases h; exact ⟨⟨_, rfl⟩, ha, hb, hc, hd, he⟩
+      · rintro ⟨_, ha, hb, hc, hd, he⟩; exact ⟨_, ha, _, hb, _, hc, _, hd, _, he, rfl⟩
   | _ => simp [decode]
 
 /-- A reply that is not an object is refused. -/
@@ -233,5 +252,9 @@ theorem decode_choices_not_array (v : Value) (h : ∀ xs, get v "choices" ≠ .a
 /-- A well-typed reply is **never coerced**: a present `id` that is not a string is refused. -/
 theorem decode_id_wrong_type (v : Value) (h : ∀ s, get v "id" ≠ .str s) (h' : get v "id" ≠ .null) (r : Response) : decode v ≠ .ok r := by
   intro hc; rw [decode_ok_iff] at hc; rcases hc with ⟨_, hid, _⟩; rw [optStr_wrong v "id" h h'] at hid; cases hid
+
+/-- A present `provider` that is not a string is refused. -/
+theorem decode_provider_wrong_type (v : Value) (h : ∀ s, get v "provider" ≠ .str s) (h' : get v "provider" ≠ .null) (r : Response) : decode v ≠ .ok r := by
+  intro hc; rw [decode_ok_iff] at hc; rcases hc with ⟨_, _, _, _, _, hp⟩; rw [optStr_wrong v "provider" h h'] at hp; cases hp
 
 end VbmLlm.OpenAI

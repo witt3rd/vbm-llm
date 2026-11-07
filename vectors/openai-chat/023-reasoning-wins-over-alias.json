@@ -1,0 +1,1 @@
+{"choices":[{"message":{"role":"assistant","content":"4","reasoning":"first","reasoning_content":"second"}},{"message":{"role":"assistant","content":"5","reasoning":null,"reasoning_content":"only the alias"}}]}

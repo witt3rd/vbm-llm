@@ -1,0 +1,8 @@
+complete
+response id="gen-r1" model="deepseek/deepseek-r1" provider="Together"
+choice index=0 finish="stop" class=complete
+  content "The answer is 4."
+  refusal none
+  reasoning "The user asks for 2+2. That is 4."
+usage prompt=9 completion=14 total=23 cached=none reasoning=9
+tokens uncached=9 read=0 write=0 output=14 reasoning=9

@@ -1,0 +1,2 @@
+fault
+chunk 0: reply.choices[0].delta.reasoning is not a string

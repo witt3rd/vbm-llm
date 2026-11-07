@@ -1,0 +1,11 @@
+ok
+response id=none model=none provider=none
+choice index=none finish=none class=none
+  content "4"
+  refusal none
+  reasoning "first"
+choice index=none finish=none class=none
+  content "5"
+  refusal none
+  reasoning "only the alias"
+usage none

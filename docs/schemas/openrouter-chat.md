@@ -6,6 +6,7 @@ OpenRouter publishes its chat profile as documentation pages (Markdown, the resp
 |---|---|---|---|
 | Streaming | `https://openrouter.ai/docs/api-reference/streaming.md` (10,074 bytes) | 2026-11-05, read only | `6d055bdcff265cadf9ff7a094772fcd145872a1d279994c689024ef46ee43fb5` |
 | API overview | `https://openrouter.ai/docs/api-reference/overview.md` (18,737 bytes) | 2026-11-05, read only | `254df1df41593b7ac240dc80f4e32375424988fce02600ab060deb4dc06caff2` |
+| Reasoning tokens | `https://openrouter.ai/docs/guides/best-practices/reasoning-tokens.md` (33,380 bytes) | 2026-11-05, read only | `596e6b745a147ac582f2f44483d6ac0faca78e77a085d2abc8f861d1e0d59284` |
 
 The pages are not versioned: fetching them again and finding another hash is a **schema bump**: read the diff, update the index (`openrouter-chat` in `clause-index.txt`) and the decoders, then change this table; nothing else may move the pin.
 
@@ -16,8 +17,8 @@ The pages are not versioned: fetching them again and finding another hash is a *
 3. **A failure after the stream began** arrives as a chunk with a top-level `error` and `finish_reason: "error"`, HTTP status still 200, possibly the first and only chunk: the fold stops there and returns the message and the partial reply (an `error chunk` outcome, never a complete reply: vectors `o002`, `o003`).
 4. **Comment lines** (`: OPENROUTER PROCESSING`) keep the connection alive: the event splitter's (a comment is not an event).
 
-Also, **the `code` of an error body is a number before the stream is committed** (`{"error": {"code": 400, "message": ...}}`, the HTTP status) and a word mid-stream: `OpenRouter.decodeApiError` reads either, as itself (a fraction or any other type is refused). A parameter the chosen model does not support is **ignored by the provider**: nothing the wire contract can say.
+Also, **the `code` of an error body is a number before the stream is committed** (`{"error": {"code": 400, "message": ...}}`, the HTTP status) and a word mid-stream: `OpenRouter.decodeApiError` reads either, as itself (a fraction or any other type is refused). **The reasoning text and the provider** are read as data, not as a deviation of the stream: a message's (or a delta's) `reasoning` string, with `reasoning_content` as its documented alias ("it functions identically"), and the top-level `provider` string of a reply or a chunk (the Streaming page's error example shows it). `reasoning_details` (the structured form) is not read. A parameter the chosen model does not support is **ignored by the provider**: nothing the wire contract can say.
 
 ## Provenance of the vectors
 
-`vectors/openai-chat-stream/o001` to `o003` and `vectors/openrouter-chat-error/` are built here from the shapes the two pages show (the abridged chunk examples of the Streaming page, the `{"error": {"code": 400, ...}}` example); none is a recorded reply of the service.
+`vectors/openai-chat-stream/o001` to `o004` (`o004`: reasoning pieces then content, from the Reasoning page's shapes; its twin is the single-shot reply) and `vectors/openrouter-chat-error/` are built here from the shapes the two pages show (the abridged chunk examples of the Streaming page, the `{"error": {"code": 400, ...}}` example); none is a recorded reply of the service.

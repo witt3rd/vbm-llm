@@ -1,7 +1,8 @@
 complete
-response id="chatcmpl-1" model="m"
+response id="chatcmpl-1" model="m" provider=none
 choice index=0 finish="tool_calls" class=callsPending
   content none
   refusal none
+  reasoning none
   call id="call_1" name="python" arguments="{\"code\":\"1+1\"}"
 usage none

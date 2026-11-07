@@ -48,6 +48,8 @@ def ledger : List Obligation := [
   O "openai-choice-requires-a-message" ["openai-chat:CreateChatCompletionResponse.choices.message"] (.proved [``VbmLlm.OpenAI.decodeChoice_no_message_refused, ``VbmLlm.OpenAI.decodeChoice_ok_iff]),
   O "openai-message-text-is-string-or-null" ["openai-chat:ChatCompletionResponseMessage.content", "openai-chat:ChatCompletionResponseMessage.refusal"]
     (.proved [``VbmLlm.OpenAI.decodeMessage_ok_iff, ``VbmLlm.OpenAI.optStr_ok_iff, ``VbmLlm.OpenAI.optStr_wrong]),
+  O "openai-reasoning-text-and-provider-are-read-and-never-coerced" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
+    (.proved [``VbmLlm.OpenAI.optReasoning_ok_iff, ``VbmLlm.OpenAI.optReasoning_wrong, ``VbmLlm.OpenAI.decodeMessage_ok_iff, ``VbmLlm.OpenAI.decode_provider_wrong_type]),
   O "openai-tool-calls-absent-or-an-array-of-calls" ["openai-chat:ChatCompletionResponseMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeCalls_ok_iff, ``VbmLlm.OpenAI.decodeToolCalls_ok_iff]),
   O "openai-tool-call-shape" ["openai-chat:ChatCompletionMessageToolCall.id", "openai-chat:ChatCompletionMessageToolCall.function.name", "openai-chat:ChatCompletionMessageToolCall.function.arguments"]
     (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff, ``VbmLlm.OpenAI.decodeToolCall_no_function_refused]),
@@ -101,6 +103,8 @@ def ledger : List Obligation := [
       "openai-chat:ChatCompletionMessageToolCallChunk.id", "openai-chat:ChatCompletionMessageToolCallChunk.function.name", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
     (.proved [``VbmLlm.OpenAI.mergeCall_arguments, ``VbmLlm.OpenAI.mergeCall_id_first, ``VbmLlm.OpenAI.mergeCall_name_first, ``VbmLlm.OpenAI.mergeCall_id_kept, ``VbmLlm.OpenAI.mergeCall_name_kept,
       ``VbmLlm.OpenAI.applyChoice_content, ``VbmLlm.OpenAI.applyChoice_refusal, ``VbmLlm.OpenAI.applyChoice_finish, ``VbmLlm.OpenAI.applyChunk_id, ``VbmLlm.OpenAI.applyChunk_model, ``VbmLlm.OpenAI.applyChunk_usage]),
+  O "openai-stream-reasoning-concatenates-and-provider-is-first" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
+    (.proved [``VbmLlm.OpenAI.applyChoice_reasoning, ``VbmLlm.OpenAI.applyChunk_provider]),
   O "openai-stream-chunk-boundaries-do-not-matter" ["openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
     (.proved [``VbmLlm.OpenAI.foldPieces_eq, ``VbmLlm.OpenAI.pieces_content, ``VbmLlm.OpenAI.foldArgs_arguments, ``VbmLlm.OpenAI.foldArgs_id, ``VbmLlm.OpenAI.foldArgs_name]),
   O "openai-stream-missing-index-is-refused-by-default" ["openai-chat:CreateChatCompletionStreamResponse.choices.index", "openai-chat:ChatCompletionMessageToolCallChunk.index"]

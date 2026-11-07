@@ -1,6 +1,7 @@
 ok
-response id=none model="b"
+response id=none model="b" provider=none
 choice index=none finish=none class=none
   content "second"
   refusal none
+  reasoning none
 usage none

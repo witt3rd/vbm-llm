@@ -1,6 +1,7 @@
 ok
-response id="x" model=none
+response id="x" model=none provider=none
 choice index=0 finish="stop" class=complete
   content none
   refusal "I cannot help with that."
+  reasoning none
 usage none

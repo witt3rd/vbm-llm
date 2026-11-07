@@ -6,6 +6,7 @@ a present field has its type or is refused, unread fields are ignored. Differenc
 * `choices` may be absent or empty (the usage frame of `stream_options.include_usage` has none);
 * a choice carries a `delta`, absent reads as an empty delta;
 * a tool-call fragment's `index` is **required** by the schema: it is read as `Option` here and the fold decides what a missing one means (`Policy.missingIndexIsZero`);
+* the reasoning text of a delta (`reasoning`, else `reasoning_content`) and the `provider` of a chunk are read as the reply reads them (`Response.lean`);
 * an `error` member anywhere makes the chunk an **error chunk** (OpenRouter's mid-stream error arrives after content with HTTP 200): its message is kept when it is a string or an object with a string `message`. -/
 namespace VbmLlm.OpenAI
 open LeanJson
@@ -22,6 +23,7 @@ structure Delta where
   content : Option String
   refusal : Option String
   toolCalls : List ToolCallDelta
+  reasoning : Option String
   deriving DecidableEq, Repr
 
 structure ChunkChoice where
@@ -41,6 +43,7 @@ structure Chunk where
   choices : List ChunkChoice
   usage : Option Usage
   error : Option ChunkError
+  provider : Option String
   deriving DecidableEq, Repr
 
 def decodeToolCallDelta (v : Value) : Except Fault ToolCallDelta :=
@@ -68,14 +71,15 @@ def decodeToolCallDeltas : List Value → Nat → Except Fault (List ToolCallDel
 def decodeDelta (d : Value) : Except Fault Delta := do
   let content ← optStr d "content"
   let refusal ← optStr d "refusal"
+  let reasoning ← optReasoning d
   match get d "tool_calls" with
-  | .null => pure { content, refusal, toolCalls := [] }
+  | .null => pure { content, refusal, toolCalls := [], reasoning }
   | .arr xs =>
     let toolCalls ← underStep (.key "tool_calls") (decodeToolCallDeltas xs 0)
-    pure { content, refusal, toolCalls }
+    pure { content, refusal, toolCalls, reasoning }
   | _ => .error { path := [.key "tool_calls"], kind := .wrongType .array }
 
-def emptyDelta : Delta := { content := none, refusal := none, toolCalls := [] }
+def emptyDelta : Delta := { content := none, refusal := none, toolCalls := [], reasoning := none }
 
 def decodeChunkChoice (c : Value) : Except Fault ChunkChoice :=
   match c with
@@ -115,7 +119,8 @@ def decodeChunk (v : Value) : Except Fault Chunk :=
       | .arr xs => underStep (.key "choices") (decodeChunkChoices xs 0)
       | _ => .error { path := [.key "choices"], kind := .wrongType .array }
     let usage ← decodeUsageOpt v
-    pure { id, model, choices, usage, error := errorOf v }
+    let provider ← optStr v "provider"
+    pure { id, model, choices, usage, error := errorOf v, provider }
   | _ => .error (Fault.here (.wrongType .object))
 
 end VbmLlm.OpenAI

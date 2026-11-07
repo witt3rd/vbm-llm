@@ -49,6 +49,12 @@ theorem applyChoice_refusal (pol : Policy) (a a' : ChoiceAcc) (c : ChunkChoice) 
   unfold applyChoice at h; split at h <;> simp_all
   rename_i calls _; rw [← h]
 
+/-- The reasoning text concatenates in order, as the content does. -/
+theorem applyChoice_reasoning (pol : Policy) (a a' : ChoiceAcc) (c : ChunkChoice) (h : applyChoice pol a c = some a') :
+    a'.reasoning = appendOpt a.reasoning c.delta.reasoning := by
+  unfold applyChoice at h; split at h <;> simp_all
+  rename_i calls _; rw [← h]
+
 /-- The last `finish_reason` seen wins; a chunk with none leaves it. -/
 theorem applyChoice_finish (pol : Policy) (a a' : ChoiceAcc) (c : ChunkChoice) (h : applyChoice pol a c = some a') :
     a'.finish = (match c.finishReason with | some f => some f | none => a.finish) := by
@@ -60,6 +66,10 @@ theorem applyChunk_id (pol : Policy) (s s' : State) (c : Chunk) (h : applyChunk 
   rename_i cs _; rw [← h]
 
 theorem applyChunk_model (pol : Policy) (s s' : State) (c : Chunk) (h : applyChunk pol s c = some s') : s'.model = firstOpt s.model c.model := by
+  unfold applyChunk at h; split at h <;> simp_all
+  rename_i cs _; rw [← h]
+
+theorem applyChunk_provider (pol : Policy) (s s' : State) (c : Chunk) (h : applyChunk pol s c = some s') : s'.provider = firstOpt s.provider c.provider := by
   unfold applyChunk at h; split at h <;> simp_all
   rename_i cs _; rw [← h]
 
@@ -243,6 +253,7 @@ theorem decodeToolCallDelta_other_type_refused (v : Value) (t : String) (h : get
 theorem decodeDelta_tool_calls_wrong (d : Value) (h : ∀ xs, get d "tool_calls" ≠ .arr xs) (h' : get d "tool_calls" ≠ .null) (r : Delta) : decodeDelta d ≠ .ok r := by
   intro hc
   unfold decodeDelta at hc
+  rw [bind_ok_iff] at hc; obtain ⟨_, _, hc⟩ := hc
   rw [bind_ok_iff] at hc; obtain ⟨_, _, hc⟩ := hc
   rw [bind_ok_iff] at hc; obtain ⟨_, _, hc⟩ := hc
   cases hg : get d "tool_calls" with

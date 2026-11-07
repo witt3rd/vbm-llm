@@ -1,0 +1,7 @@
+complete
+response id="chatcmpl-9" model="m" provider=none
+choice index=0 finish="stop" class=complete
+  content "4"
+  refusal none
+  reasoning "Two and two."
+usage none

@@ -1,0 +1,1 @@
+{"id":"chatcmpl-9","object":"chat.completion","created":1,"model":"m","choices":[{"index":0,"message":{"role":"assistant","content":"4","reasoning_content":"Two and two."},"finish_reason":"stop"}]}
