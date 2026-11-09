@@ -4,8 +4,9 @@ import VbmLlm.OpenAI.Response
 
 The wire contract of `CreateChatCompletionRequest` (schema pinned in `docs/schemas/openai-chat.md`) as a **typed request** and its encoding to a `LeanJson.Value` (printing the value to bytes is `Request.encodeBytes`, equal to
 `LeanJson.print`, proved in `vbm-json` to parse back to it). The typed request carries what a tool-using agent sends: the model (an opaque string), the messages (system, developer, user and tool
-messages as text, assistant messages as text and tool calls), the tool declarations, `tool_choice`, `parallel_tool_calls`, `stream`, `stream_options.include_usage`, the token limits and the two sampling
-numbers. Everything else the schema lists is not modelled (`docs/clause-index.txt` says which).
+messages as text, assistant messages as text and tool calls), the tool declarations, `tool_choice`, `parallel_tool_calls`, `stream`, `stream_options.include_usage`, the token limits, the two sampling
+numbers and the reasoning effort (OpenRouter's and the compatible providers' `reasoning` object, `{"effort": <level>}`: the level is the model's own vocabulary, an opaque string like `model`, never looked at).
+Everything else the schema lists is not modelled (`docs/clause-index.txt` says which).
 
 Encoding rules (each a theorem in `VbmLlmProofs/OpenAI/Request.lean`): a member of the request that is `none` (or an empty `tools` list, or an assistant message with no calls and no text) is **left out**, never written as `null`, with one exception: an assistant message that has tool calls and no text is written with `"content": null`;
 a tool call's arguments are written verbatim; a count is written as a plain natural. No client behaviour: the model name is not looked at, nothing says which fields a provider honours. -/
@@ -54,6 +55,8 @@ structure Request where
   maxTokens : Option Nat := none
   temperature : Option Number := none
   topP : Option Number := none
+  /-- the model's own reasoning level (`max`, `xhigh`, `high`, `medium`, `low`, `minimal`, `none`, or another word the provider's model list allows): an opaque string -/
+  reasoningEffort : Option String := none
   deriving Repr
 
 /-! ### A count as a number lexeme -/
@@ -98,6 +101,10 @@ def encodeMessage : RequestMessage → Value
 def encodeTool (t : Tool) : Value :=
   .obj [("type", .str "function"), ("function", .obj (("name", .str t.name) :: opt "description" .str t.description (opt "parameters" .obj t.parameters (opt "strict" .bool t.strict []))))]
 
+/-- The `reasoning` object: the effort, the only member modelled (OpenRouter and the compatible providers take `{"effort": <level>}`). -/
+def encodeReasoning (effort : String) : Value :=
+  .obj [("effort", .str effort)]
+
 def encodeToolChoice : ToolChoice → Value
   | .never => .str "none"
   | .auto => .str "auto"
@@ -110,7 +117,8 @@ def Request.encode (r : Request) : Value :=
     opt "tools" (fun ts => .arr (ts.map encodeTool)) (match r.tools with | [] => none | ts => some ts)
     (opt "tool_choice" encodeToolChoice r.toolChoice (opt "parallel_tool_calls" .bool r.parallelToolCalls (opt "stream" .bool r.stream
       (opt "stream_options" (fun b => .obj [("include_usage", .bool b)]) r.includeUsage (opt "max_completion_tokens" (fun n => .num (natNumber n)) r.maxCompletionTokens
-        (opt "max_tokens" (fun n => .num (natNumber n)) r.maxTokens (opt "temperature" .num r.temperature (opt "top_p" .num r.topP [])))))))))
+        (opt "max_tokens" (fun n => .num (natNumber n)) r.maxTokens (opt "temperature" .num r.temperature (opt "top_p" .num r.topP
+          (opt "reasoning" encodeReasoning r.reasoningEffort []))))))))))
 
 /-- **The request as bytes, in one call**: the printed `encode`, written straight into one buffer by `LeanJson.printBytes` (no list of bytes: `encodeBytes_eq` says it is the bytes of the reference printer). -/
 def Request.encodeBytes (r : Request) : ByteArray := LeanJson.printBytes r.encode
@@ -211,6 +219,13 @@ def decodeIncludeUsage (v : Value) : Except Fault (Option Bool) :=
   | .obj ms => underStep (.key "stream_options") (optBool (.obj ms) "include_usage")
   | _ => .error { path := [.key "stream_options"], kind := .wrongType .object }
 
+/-- `reasoning`: absent or `null` is no setting; an object with a string `effort` is the level; anything else is refused (the effort is opaque: never coerced, never guessed). -/
+def decodeReasoning (v : Value) : Except Fault (Option String) :=
+  match get v "reasoning" with
+  | .null => .ok none
+  | .obj ms => underStep (.key "reasoning") (optStr (.obj ms) "effort")
+  | _ => .error { path := [.key "reasoning"], kind := .wrongType .object }
+
 def Request.decodeBody (v : Value) : Except Fault Request := do
   let model ← reqStr v "model"
   let messages ← decodeMessages v
@@ -223,7 +238,8 @@ def Request.decodeBody (v : Value) : Except Fault Request := do
   let maxTokens ← optNat v "max_tokens"
   let temperature ← optNum v "temperature"
   let topP ← optNum v "top_p"
-  pure { model, messages, tools, toolChoice, parallelToolCalls, stream, includeUsage, maxCompletionTokens, maxTokens, temperature, topP }
+  let reasoningEffort ← decodeReasoning v
+  pure { model, messages, tools, toolChoice, parallelToolCalls, stream, includeUsage, maxCompletionTokens, maxTokens, temperature, topP, reasoningEffort }
 
 /-- **Decode a request.** -/
 def Request.decode (v : Value) : Except Fault Request :=

@@ -5,7 +5,8 @@ import VbmLlmProofs.OpenAI.Response
 
 * **A count is written as a plain natural** (`natOf_natNumber`): reading the lexeme back gives the count, for every natural.
 * **What the encoding says, member by member** (`encode_get_*`): each member of the encoded request is the value of its field, and a member whose field is absent is absent (null); an encoded request
-  is an object. No member of the request object is ever written as `null` (inside a message, an assistant message with calls and no text is written with `"content": null`: `encodeMessage_assistant_calls_no_text`).
+  is an object. The reasoning effort is written as the object `{"effort": <level>}` under `reasoning`, after `top_p`, and only when it is set (`encode_get_reasoning`, `encode_reasoning_absent`); the level is
+  an opaque string, read back as itself (`decodeReasoning_encodeReasoning`). No member of the request object is ever written as `null` (inside a message, an assistant message with calls and no text is written with `"content": null`: `encodeMessage_assistant_calls_no_text`).
 * **A tool call is written the way the response decoder reads it** (`decodeToolCall_encodeToolCall`): the id, the name and the arguments verbatim. -/
 namespace VbmLlm.OpenAI
 open LeanJson
@@ -116,6 +117,17 @@ theorem encode_get_top_p (r : Request) : get r.encode "top_p" = orNull .num r.to
   simp (disch := decide) only [lookup_cons_ne, lookup_opt_ne]
   exact lookup_opt_self _ _ _ _ (by repeat (first | exact fresh_nil _ | apply fresh_opt _ _ (by decide) | apply fresh_cons _ (by decide)))
 
+/-- **The reasoning effort is written as the object `{"effort": <level>}`**: absent when there is no setting, never `null`. -/
+theorem encode_get_reasoning (r : Request) : get r.encode "reasoning" = orNull encodeReasoning r.reasoningEffort := by
+  unfold Request.encode
+  rw [get_obj]
+  simp (disch := decide) only [lookup_cons_ne, lookup_opt_ne]
+  exact lookup_opt_self _ _ _ _ (by repeat (first | exact fresh_nil _ | apply fresh_opt _ _ (by decide) | apply fresh_cons _ (by decide)))
+
+/-- The `effort` of a written reasoning object is the level itself. -/
+theorem encodeReasoning_get (s : String) : get (encodeReasoning s) "effort" = .str s := by
+  simp [encodeReasoning, get, lookup, go]
+
 theorem encode_get_temperature (r : Request) : get r.encode "temperature" = orNull .num r.temperature := by
   unfold Request.encode
   rw [get_obj]
@@ -183,7 +195,7 @@ theorem encode_members_not_null (r : Request) (ms : List (String × Value)) (h :
   unfold Request.encode at h
   cases h
   refine cons_not_null (by simp) (cons_not_null (by simp) ?_)
-  repeat (first | exact fun p hp => by simp at hp | refine opt_not_null _ (by intro a; cases a <;> simp [encodeToolChoice]) ?_)
+  repeat (first | exact fun p hp => by simp at hp | refine opt_not_null _ (by intro a; cases a <;> simp [encodeToolChoice, encodeReasoning]) ?_)
 
 /-! ### A tool call is written the way the response decoder reads it -/
 
@@ -292,6 +304,19 @@ theorem decodeIncludeUsage_encode (v : Value) (o : Option Bool) (h : get v "stre
   cases o <;> simp only [decodeIncludeUsage, h, orNull]
   simp [optBool, get, lookup, go, underStep]
 
+/-- The reasoning effort, read back from its own object: `{"effort": <level>}` is the level. -/
+theorem optStr_encodeReasoning (s : String) : optStr (encodeReasoning s) "effort" = .ok (some s) := by
+  simp [encodeReasoning, optStr, get, lookup, go]
+
+theorem decodeReasoning_encode (v : Value) (o : Option String) (h : get v "reasoning" = orNull encodeReasoning o) : decodeReasoning v = .ok o := by
+  cases o with
+  | none => simp [decodeReasoning, h, orNull]
+  | some s =>
+    simp only [orNull] at h
+    unfold decodeReasoning
+    rw [h]
+    simp [encodeReasoning, underStep, optStr, get, lookup, go]
+
 /-- **The round trip.** Decoding an encoded request gives the request back, for every request that has a message (the schema requires one). -/
 theorem decode_encode (r : Request) (h : r.messages ≠ []) : Request.decode r.encode = .ok r := by
   obtain ⟨ms, hms⟩ := encode_object r
@@ -306,9 +331,11 @@ theorem decode_encode (r : Request) (h : r.messages ≠ []) : Request.decode r.e
   have g9 := encode_get_max_tokens r
   have g10 := encode_get_temperature r
   have g11 := encode_get_top_p r
-  rw [hms] at g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 ⊢
+  have g12 := encode_get_reasoning r
+  rw [hms] at g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 g12 ⊢
   simp only [Request.decode, Request.decodeBody, bind, Except.bind, (reqStr_ok_iff _ _ _).2 g1, decodeMessages_encode _ _ h g2, decodeTools_encode _ _ g3, decodeToolChoice_encode _ _ g4,
-    optBool_orNull _ _ _ g5, optBool_orNull _ _ _ g6, decodeIncludeUsage_encode _ _ g7, optNat_orNull _ _ _ g8, optNat_orNull _ _ _ g9, optNum_orNull _ _ _ g10, optNum_orNull _ _ _ g11, pure, Except.pure]
+    optBool_orNull _ _ _ g5, optBool_orNull _ _ _ g6, decodeIncludeUsage_encode _ _ g7, optNat_orNull _ _ _ g8, optNat_orNull _ _ _ g9, optNum_orNull _ _ _ g10, optNum_orNull _ _ _ g11,
+    decodeReasoning_encode _ _ g12, pure, Except.pure]
 
 /-! ### Refusals (fail closed) -/
 
@@ -372,7 +399,7 @@ theorem decode_ok_stable (v : Value) (r : Request) (h : Request.decode v = .ok r
   apply decode_encode
   cases v <;> simp only [Request.decode] at h <;> try (cases h; done)
   simp only [Request.decodeBody, bind_ok_iff, pure_ok_iff] at h
-  obtain ⟨_, _, ms, hms, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
+  obtain ⟨_, _, ms, hms, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
   exact decodeMessages_ne_nil _ _ hms
 
 /-- **The request as bytes is the reference printer's**: `encodeBytes r` is exactly the bytes of `print (encode r)` (from `printBytes_eq`), so everything proved of the printed request holds of these bytes. -/
