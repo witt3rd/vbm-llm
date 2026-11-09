@@ -28,15 +28,6 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Plan:** accept, because there is no other mature route from Lean to running code and the kernel is small and independently re-checked; revisit when an extractor with a semantics-preservation proof exists.
 - **Covers:** `lean-compiler` `file:lean-toolchain` `file:mise.toml`
 
-### T02. The independent proof checkers: leanchecker, nanoda
-- **What:** `leanchecker --fresh` replays every declaration in a fresh environment (guards a tampered or stale `.olean`); nanoda (`nanoda_bin`, shipped in the Lean release) re-checks the exported proof with an independent kernel implementation.
-- **Enters:** `scripts/tier2.sh` (run by CI every 6 hours and on dispatch); they read the build products and the export of `VbmLlm` and `VbmLlmProofs`.
-- **Assumes:** that two independent checkers agreeing is evidence the kernel did not mis-accept; no written contract.
-- **Test:** none that can fail on a bad proof here; Tier 2 itself is the test, and a deliberately false theorem in a scratch file is the planned negative test.
-- **Owner:** upstream Lean; the owner approves the tier script (protected set).
-- **Plan:** verify. Add a negative self-test (a corrupted export must fail nanoda) in a later slice.
-- **Covers:** `tool:leanchecker` `tool:nanoda`
-
 ### T03. The Lean runtime and its headers (lean.h, libleanrt)
 - **What:** the C runtime every Lean-compiled program links: reference counting, allocation, arrays and strings, big numbers. It is the lowest layer under the compiled decoder and the vector checker. It is not checked by us.
 - **Enters:** the Lean release pinned in `lean-toolchain`.
@@ -83,15 +74,6 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Owner:** upstream tools; the owner approves the scripts (protected set).
 - **Plan:** accept, because they touch the process and not the artifact: a compromised tool could land a bad change, which the gates and the relabel-attack suite are there to catch.
 - **Covers:** `tool:git` `tool:gh` `tool:flock` `tool:python3`
-
-### T08. The CI runner and workflow actions (GitHub Actions)
-- **What:** `.github/workflows/ci.yml` runs `scripts/tier1.sh` on every push to `main`, and `scripts/tier2.sh` every 6 hours and on dispatch, on GitHub-hosted `ubuntu-latest` runners only (`scripts/lint-workflows.py` fails Tier 1 on a self-hosted label, on a `pull_request_target` trigger and on any secret other than the default token). The workflows have no pull-request trigger, so a fork's code never runs with the repository's token. Three third-party actions are pinned by commit sha: `actions/checkout`, `actions/cache`, `jdx/mise-action`. Token: the default `GITHUB_TOKEN`, `contents: read`; no secrets. `.github/workflows/vbm-land-update.yml` runs weekly and on dispatch under the same rules (`actions/checkout` pinned by sha, the default read-only token, no secrets): it only reports whether the vendored vbm-land is intact and whether a newer release is out; it never changes the repository.
-- **Enters:** `.github/workflows/ci.yml`; every Tier 1 and Tier 2 run in CI. The workflows run only on GitHub: they cannot be run here.
-- **Assumes:** the runner image, the pinned action commits and the cache behave as documented; a cache hit is only a speed-up (Tier 1 rebuilds with zero warnings and the gates re-derive everything), but a compromised upstream action could change what is checked. There is no written contract beyond GitHub's documentation.
-- **Test:** scripts/test_lint_workflows.sh checks the lint that judges the workflow files; nothing inside this repository can run the workflow itself.
-- **Owner:** the owner (`.github/workflows/` is in the protected set and CODEOWNERS); the actions are upstream (GitHub, jdx).
-- **Plan:** sandbox. Keep the permissions read-only and secret-free; the actions are pinned to commit shas; the cache never replaces the gates.
-- **Covers:** `file:.github/workflows/ci.yml` `file:.github/workflows/vbm-land-update.yml`
 
 ## The pinned libraries
 
