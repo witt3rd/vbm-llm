@@ -1,1 +1,1 @@
-land/lib/no-crash-record.sh
+../.land/tool/lib/no-crash-record.sh

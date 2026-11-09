@@ -36,7 +36,7 @@ for r in $selfs; do
   [ -n "$f" ] || { echo "lint-scoped-runners: the self runner $r is not in the tree" >&2; exit 1; }
   guard_ok "$f" || bad="$bad$f: no RUN_SCOPED_INNER guard that re-execs it under scripts/run-scoped.sh"$'\n'
 done
-files=$(git ls-files 'scripts/*.sh' scripts/wt scripts/land-direct 'scripts/githooks/*' | grep -vE '^scripts/(lint-scoped-runners|run-scoped)\.sh$' || true)
+files=$(git ls-files 'scripts/*.sh' scripts/wt .land/land-direct 'scripts/githooks/*' | grep -vE '^scripts/(lint-scoped-runners|run-scoped)\.sh$' || true)
 if [ -n "$runners" ]; then
   # shellcheck disable=SC2086
   bad="$bad$(scan $files)"

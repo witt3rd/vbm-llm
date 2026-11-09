@@ -8,7 +8,7 @@ One file listing **everything outside our direct control that vbm-llm executes o
 
 ## How the gate keeps this file true
 
-The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`scripts/land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `scripts/pinned-libs.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
+The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`.land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `scripts/pinned-libs.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
 - A new boundary (extern, C file, workflow, pinned library, tool) with no entry **fails**.
 - A `Covers` key that names nothing real fails (a stale or invented cover), and **removing any entry fails** (the gate does this to itself on every run, one entry at a time). Dangling file references fail. An entry needs all seven fields, a **Plan** from `verify | replace | sandbox | accept`, and `accept` needs `because ...`. **Assumes** must link a written contract or say `no written contract` (counted as a gap); **Test** must name a test that can fail or say `none` (counted as a gap).
 - Not covered by the gate (said, not hidden): a tool called from a script that is not on the watch-list in `scripts/trust-ledger-check.sh`, and the *quality* of an entry's prose.
@@ -68,7 +68,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 
 ### T07. git, gh, flock, python3: the process tooling
 - **What:** `git` and `gh` (the red-check, rebase and push steps of the pinned lander), `flock` (the lander's mutex), `python3` (the trust-ledger checker, the pin checker, the diff judge, the public-readiness lint). They run on the developer's machine; none is part of any artifact.
-- **Enters:** `scripts/land-direct`, `scripts/land/`, `scripts/trust_ledger.py`, `scripts/pinned-lib.py`, `scripts/gate-diff-improving.sh`, the Tier 1 scripts.
+- **Enters:** `.land/land-direct`, `.land/tool/`, `scripts/trust_ledger.py`, `scripts/pinned-lib.py`, `scripts/gate-diff-improving.sh`, the Tier 1 scripts.
 - **Assumes:** they do what their manuals say; the self-tests of the scripts that use them (scratch repositories) are the check that our use of them is right; no written contract.
 - **Test:** scripts/test_protected_set.sh, scripts/test_gate_diff_improving.sh, scripts/test_pinned_lib.sh (each runs the real script against a scratch repository).
 - **Owner:** upstream tools; the owner approves the scripts (protected set).
@@ -87,13 +87,13 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Covers:** `pin:vbm-json`
 
 ### T10. vbm-land: the vendored landing tool
-- **What:** a pinned, vendored copy of vbm-land (`scripts/land/`, the entry script `scripts/land-direct`, the skills in `.agents/skills/`): the lander that rebases, runs Tier 1 on the exact combination and pushes a plain fast-forward to `main`. It runs with the credentials of whoever lands, and its hooks (`scripts/land.d/`) run the diff judge and the relabel-attack suite.
-- **Enters:** `scripts/land/PIN` (source, version, the commit, the manifest hash), `scripts/land-direct`, `scripts/land.conf`.
-- **Assumes:** the release at the pinned commit is what its manifest says (`scripts/land/bin/land-check` checks every vendored file against the manifest, offline, in Tier 1; with `--upstream` it also fetches the manifest at the pinned commit): a forged pin and tree edited together fail `--upstream`. The release's signature was not checked (no signers file): a gap; no written contract beyond the lander's own README.
+- **What:** a pinned, vendored copy of vbm-land (`.land/tool/`, the entry script `.land/land-direct`, the skills in `.agents/skills/`): the lander that rebases, runs Tier 1 on the exact combination and pushes a plain fast-forward to `main`. It runs with the credentials of whoever lands, and its hooks (`.land/land.d/`) run the diff judge and the relabel-attack suite.
+- **Enters:** `.land/PIN` (source, version, the commit, the manifest hash), `.land/land-direct`, `.land/land.conf`.
+- **Assumes:** the release at the pinned commit is what its manifest says (`.land/tool/bin/land-check` checks every vendored file against the manifest, offline, in Tier 1; with `--upstream` it also fetches the manifest at the pinned commit): a forged pin and tree edited together fail `--upstream`. The release's signature was not checked (no signers file): a gap; no written contract beyond the lander's own README.
 - **Test:** scripts/attacks/08d-vendored-copy-edited.sh and 08e-vendored-stray-file.sh (a local patch and a stray file are each refused by the drift check); the lander's own tests run in its repository.
 - **Owner:** upstream vbm-land (same owner); the pin is in the protected set.
-- **Plan:** verify. Record the release signer in `scripts/land.signers` so installs and updates verify the signature.
-- **Covers:** `file:scripts/land/PIN`
+- **Plan:** verify. Record the release signer in `.land/land.signers` so installs and updates verify the signature.
+- **Covers:** `file:.land/PIN`
 
 ### T11. vbm-simd: the bit-parallel kernels `vbm-json` is built on
 - **What:** the library `vbm-simd` (https://github.com/witt3rd/vbm-simd), a dependency of `vbm-json` that lake pulls in transitively at the revision `vbm-json` pins; its compiled objects are archived with `vbm-json`'s and run inside every parse. Nothing in `VbmLlm` imports it.

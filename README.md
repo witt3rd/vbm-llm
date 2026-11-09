@@ -50,7 +50,7 @@ Prerequisites: `git`, [mise](https://mise.jdx.dev), `python3`, `jq`, a C compile
 
 ## How it is built
 
-Agents write it, under mechanical gates instead of line-by-line review; the standard is VBM (verified bare metal), see [the VBM standard](https://github.com/witt3rd/vbm). Direction and the pinned policies: `docs/decisions/0001-vbm-llm.md`. Landing: `scripts/land-direct` (a pinned copy of [vbm-land](https://github.com/witt3rd/vbm-land)); the scorecard adapter is `scorecard.toml`.
+Agents write it, under mechanical gates instead of line-by-line review; the standard is VBM (verified bare metal), see [the VBM standard](https://github.com/witt3rd/vbm). Direction and the pinned policies: `docs/decisions/0001-vbm-llm.md`. Landing: `.land/land-direct` (a pinned copy of [vbm-land](https://github.com/witt3rd/vbm-land)); the scorecard adapter is `scorecard.toml`.
 
 ## License
 

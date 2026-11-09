@@ -2,4 +2,4 @@
 # The entry point: land with scripts/land-direct (no pull request, ever). It runs the pinned lander (vbm-land, scripts/land/PIN); everything under scripts/land/ is read-only (scripts/land/bin/land-check fails on a local edit).
 # The wiring this repository relies on (scripts/relabel-attacks.sh --check-wired reads these two lines and the hooks): post-rebase runs the gate-diff judge; post-tier1 runs the relabel-attack suite.
 # Configuration: scripts/land.conf (read from origin/main by the lander); hooks: scripts/land.d/.
-exec "$(cd "$(dirname "$0")" && pwd)/land/bin/land-direct" "$@"
+exec "$(cd "$(dirname "$0")" && pwd)/tool/bin/land-direct" "$@"

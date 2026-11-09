@@ -14,7 +14,7 @@ done
 for ok in 'grep -q foo <<<"$x"' 'cmd | grep foo >/dev/null' 'cmd | sed -n 1p' 'cmd | head -1 # pipefail-ok' 'x | grep -c y'; do
   printf '%s\n' "$ok" > "$t"; [ -z "$(scan "$t")" ] || { echo "lint-pipefail: self-test: flagged a good line: $ok" >&2; exit 1; }
 done
-files=$(git ls-files 'scripts/*.sh' scripts/wt scripts/land-direct scripts/githooks/pre-commit | grep -v '^scripts/lint-pipefail.sh$' || true)
+files=$(git ls-files 'scripts/*.sh' scripts/wt .land/land-direct scripts/githooks/pre-commit | grep -v '^scripts/lint-pipefail.sh$' || true)
 # shellcheck disable=SC2086
 hits=$(scan $files)
 [ -z "$hits" ] || { echo "tier1: pipefail-unsafe pipelines (producer | early-exiting consumer):" >&2; echo "$hits" >&2; exit 1; }

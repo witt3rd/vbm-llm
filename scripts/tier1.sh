@@ -55,7 +55,7 @@ scripts/lint-scoped-runners.sh --selftest
 
 
 # 1d. The vendored lander is the pinned copy (no local patch): the drift check, offline.
-scripts/land/bin/land-check
+.land/tool/bin/land-check
 
 # 1e. Pinned libraries: every package of the lake manifest is a line of the protected lock scripts/pinned-libs.lock, and every adopted one is exactly what the lock says (rev, checkout, spec hash).
 scripts/pinned-lib.py fetch
