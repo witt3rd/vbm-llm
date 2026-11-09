@@ -2,9 +2,15 @@
 - Work in a worktree off a fresh origin/main. Diff ≤150 production lines, ≤45 min without a passing build; over either, stop and write a decomposition plan.
 - Commit locally with Conventional Commits. Land only with `scripts/land-direct`; never push main yourself, never force-push it, never open a PR.
 - New behaviour lands behind a flag that defaults OFF. Interface changes: add beside the old, migrate callers, delete at zero references.
-- Main is RED when the Tier 1 job of its latest push failed. While red or frozen, only a fix or revert lands. Never hotfix on main: pull the revert, reproduce in a new worktree, resubmit.
+- Everything runs before the push, once (Tier 1 on the rebased tree); nothing runs after it. If main is ever red, whoever sees it reverts the offending commit with `git revert` and lands the revert; the author fixes forward in a new worktree. A landing must not add a failure.
 - `scripts/land/` and `scripts/land-direct` are a pinned copy of vbm-land: never edit them (`scripts/land/bin/land-check` fails the gate). Change the tool upstream, then `scripts/land/bin/land-update <tag>`.
 - Decide anything reversible and log it. Escalate only money, data loss, secrets, publishing, or harm to a third party; say so in one line and stop.
+
+## Principles (the VBM + HVTBD family)
+- Everything runs before the push, once, on the commit rebased onto main. Nothing runs after the push.
+- Proofs, not tests. A test exists only for what the proofs do not cover (the boundary), never for the development tooling.
+- A failure is a root-cause question, never a reason to add a check, gate, script or document. Nothing is added to the process without deleting something.
+- The worker owns its change: when the lander refuses it, the worker fixes it and lands again until it converges.
 
 # AGENTS.md: vbm-llm
 
@@ -34,10 +40,10 @@ Slices (the order of work): scaffold, **OpenAI response decode** (with usage ari
 - **Decoders** are written as chains of small total functions each with an `_ok_iff` theorem; faults build their path on the way out. A new decoder has its characterisation theorem, its refusal theorems, its vectors (a refusal each) and its clause tags before it lands.
 - **The trust ledger** (`docs/trust-ledger.md`) lists everything outside our control; a new boundary (extern, C file, workflow, pinned library, tool) is listed there before it lands.
 
-## Gates (Tier 1 before landing; Tier 2 after landing)
+## Gates (Tier 1 before landing; nothing runs after the push)
 - **Tier 1** (`scripts/tier1.sh`): forbidden-constructs scan, import scan, pipefail lint, the vendored lander's drift check, the pinned-library check, zero-warning build, axiom gate (`scripts/AxiomGate.lean`), named-theorem ledger check with clause tags (`scripts/LedgerGate.lean`; the counts are reported, not gated), conformance vectors (`vectors/`), public-readiness lint, and the offline self-tests of the parallel runner and the crash-record check.
-- **Tier 2** (`scripts/tier2.sh`, CI on a schedule, never a gate for a landing): Tier 1 again, `leanchecker --fresh`, nanoda over the exported proof. A failure on main means revert, then fix in a worktree.
-- **Not ported yet** from the project these gates were first built in: the closure gate (the specified share of executed mass; every claim here names theorems about the functions that are the library, nothing else is executed), the delta test selection, the mutation and non-vacuity metrics, the watchdog.
+- **Nothing runs after the push.** If main is ever red, whoever sees it reverts the offending commit with `git revert` and lands the revert; the author fixes forward in a new worktree.
+- **Not ported yet** from the project these gates were first built in: the closure gate (the specified share of executed mass; every claim here names theorems about the functions that are the library, nothing else is executed), the delta test selection, the mutation and non-vacuity metrics.
 
 ## Layout
 `VbmLlm/` spec and code (Init and the pin only) · `VbmLlmProofs/` proofs (never linked), `Ledger.lean` the claims · `vectors/` the conformance checker and the recorded replies · `docs/` decisions, schemas, clause index, trust ledger, proof ledger (generated), consumption note · `scripts/` gates, the lock, the process scripts and their self-tests, the pinned lander · `scorecard.toml` the adapter for the VBM scorecard.

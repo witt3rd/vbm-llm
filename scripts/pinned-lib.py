@@ -8,7 +8,7 @@ so an untracked or edited file counts; `.git` never does). A missing SPEC_PATH i
     scripts/pinned-lib.py verify  [--lock F] [--manifest F] [--pkgs D]
           exit 0 when every package of the lake manifest is locked and every lock line is `absent` (not adopted yet) or `ok`; exit 1 and the reasons otherwise.
           `ok` = the manifest's rev is the lock's, the checkout's HEAD is that rev, and its spec_hash is the lock's. Anything else is BAD (a stale rev, a hash mismatch, a fork, an unlocked package).
-    scripts/pinned-lib.py fetch   [same]        a locked library whose checkout is MISSING (a cold CI runner, a fresh scratch tree) is cloned from the manifest's url and checked out at the LOCK's rev (never at the manifest's):
+    scripts/pinned-lib.py fetch   [same]        a locked library whose checkout is MISSING (a cold machine, a fresh scratch tree) is cloned from the manifest's url and checked out at the LOCK's rev (never at the manifest's):
           the fetch trusts nothing, `verify` runs after it and judges rev, HEAD and spec_hash exactly as before; an existing checkout is left alone (verify judges it); needs git and the network, no cache, no HOME.
     scripts/pinned-lib.py verdict [same]        one line per lock entry, `ROOT ok DIR HASH | absent | bad REASON`: the machine-readable verdict
     scripts/pinned-lib.py names [--lock F]      the lock's library names (scripts/trust-ledger-check.sh requires an entry `pin:NAME`)

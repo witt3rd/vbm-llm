@@ -1,7 +1,7 @@
 # Source me (`. scripts/git-hermetic.sh`) from any script that creates a scratch git repository or remote (git init / git clone), and from the test of a gate
-# that runs git. Hermetic git: the result must not depend on the box it runs on (a developer's global git configuration, the CI runner checkout, an enclosing hook).
-# What went red on main (Tier 2, acceptance leg): the runner's checkout is SHALLOW (actions/checkout fetch-depth 1) and a push from a shallow repository is
-# refused ("shallow update not allowed"); the developer's full clone never showed it. So a scratch base is built from a TREE (git_snapshot_repo), not by
+# that runs git. Hermetic git: the result must not depend on the box it runs on (a global git configuration, a checkout made with a depth of one, an enclosing hook).
+# What went red once: a SHALLOW clone (a depth-1 fetch) refuses a push from a shallow repository ("shallow update not allowed"), which a full clone never
+# showed. So a scratch base is built from a TREE (git_snapshot_repo), not by
 # pushing history. Ambient config (default branch, identity, signing, hooksPath, GIT_DIR from an enclosing hook) is cut off and replaced by explicit values.
 # The lint (scripts/lint-git-hermetic.sh, in Tier 1) fails a script that creates a repository without sourcing this file.
 for _v in $(compgen -e | grep -E '^(GIT_CONFIG_.*|GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|PREFIX|NAMESPACE|SHALLOW_FILE|CEILING_DIRECTORIES|AUTHOR_.*|COMMITTER_.*|SSH_COMMAND|EXEC_PATH|TEMPLATE_DIR))$'); do   # determinism-ok: unsets, order is irrelevant

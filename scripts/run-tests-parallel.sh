@@ -3,9 +3,9 @@
 # Each script runs in its own TMPDIR (so its mktemp dirs cannot clash) with its output captured; a passing script prints one line, a failing
 # one prints its whole log. The run FAILS if any script fails, is missing, or leaves no result (killed, or never started): a skipped script
 # is a failure, never a pass; so is a script that exits 0 without a ran-evidence line (`ran: NAME: N cases`, N > 0; scripts/lib-ran.sh) or that reports SKIPPED. TEST_JOBS caps the parallelism (default: the core count). Scripts must bind port 0 (scripts/mock-serve.sh).
-# A test that passes alone but fails here (or only on the CI runner) is a bug in the test: find it, never retry it or raise a timeout. Reproduce
-# CI's 4 cores with `mise exec -- taskset -c 0-3 scripts/run-tests-parallel.sh $(grep -o '^par scripts/[a-z_]*\.sh' scripts/tier1.sh | cut -d' ' -f2)`,
-# and one script in a loop with `for i in $(seq 30); do taskset -c 0-3 bash scripts/test_X.sh || break; done` (docs/worktrees.md, "A test that fails only in CI").
+# A test that passes alone but fails here (or only on a machine with fewer cores) is a bug in the test: find it, never retry it or raise a timeout. Reproduce
+# it on 4 cores with `mise exec -- taskset -c 0-3 scripts/run-tests-parallel.sh $(grep -o '^par scripts/[a-z_]*\.sh' scripts/tier1.sh | cut -d' ' -f2)`,
+# and one script in a loop with `for i in $(seq 30); do taskset -c 0-3 bash scripts/test_X.sh || break; done`.
 # Do not wait a fixed time; wait on the readiness signal. Do not `kill $!` of a backgrounded function or pipeline and assume the program in it died.
 set -uo pipefail
 cd "$(dirname "$0")/.."

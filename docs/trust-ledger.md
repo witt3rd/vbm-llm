@@ -8,7 +8,7 @@ One file listing **everything outside our direct control that vbm-llm executes o
 
 ## How the gate keeps this file true
 
-The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, every `.github/workflows/` file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`scripts/land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `scripts/pinned-libs.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
+The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`scripts/land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `scripts/pinned-libs.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
 - A new boundary (extern, C file, workflow, pinned library, tool) with no entry **fails**.
 - A `Covers` key that names nothing real fails (a stale or invented cover), and **removing any entry fails** (the gate does this to itself on every run, one entry at a time). Dangling file references fail. An entry needs all seven fields, a **Plan** from `verify | replace | sandbox | accept`, and `accept` needs `because ...`. **Assumes** must link a written contract or say `no written contract` (counted as a gap); **Test** must name a test that can fail or say `none` (counted as a gap).
 - Not covered by the gate (said, not hidden): a tool called from a script that is not on the watch-list in `scripts/trust-ledger-check.sh`, and the *quality* of an entry's prose.
@@ -23,7 +23,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **What:** the `lean` release pinned in `lean-toolchain` and `mise.toml`: the elaborator, the kernel that checks every proof, and `EmitC`, which would turn our definitions into C. A kernel soundness bug would void the proofs; an emitter bug would give the compiled code different semantics from the Lean definition.
 - **Enters:** `lean-toolchain`, `mise.toml`; every `.lean` file.
 - **Assumes:** the kernel is sound and the compiler is faithful: no written contract beyond Lean's own documentation. The conformance vectors (`vectors/`) run the compiled decoder and compare it with the recorded expectations; `leanchecker` and nanoda are the checks on the kernel (T02).
-- **Test:** scripts/tier2.sh (leanchecker `--fresh`, nanoda); the compiled decoder is checked by the vectors in Tier 1 (`vectors/Main.lean`, with a negative self-test).
+- **Test:** the compiled decoder is checked by the vectors in Tier 1 (`vectors/Main.lean`, with a negative self-test).
 - **Owner:** upstream Lean (leanprover/lean4); the owner pins it (CODEOWNERS: `lean-toolchain`, `mise.toml`).
 - **Plan:** accept, because there is no other mature route from Lean to running code and the kernel is small and independently re-checked; revisit when an extractor with a semantics-preservation proof exists.
 - **Covers:** `lean-compiler` `file:lean-toolchain` `file:mise.toml`
@@ -52,7 +52,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Assumes:** the compiler preserves C semantics for the emitted code; no written contract.
 - **Test:** the vectors run against the compiled checker, which is the real check (`vectors/Main.lean`); a reproducible-build check is not built yet.
 - **Owner:** upstream LLVM via the Lean release; the owner pins it.
-- **Plan:** sandbox. Check the compiled artifact against recorded expectations in CI, never trust the compile; no replacement is planned.
+- **Plan:** sandbox. Check the compiled artifact against recorded expectations, never trust the compile; no replacement is planned.
 - **Covers:** `clang-lld`
 
 ## The build and process tools
@@ -72,11 +72,11 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 - **Assumes:** the tarball is the one released for that tag; no checksum is verified by us today (no written contract): this is a supply-chain gap.
 - **Test:** none: nothing here can fail if the tarball were swapped (a gap, counted).
 - **Owner:** the owner (`mise.toml` is in the protected set); mise is upstream.
-- **Plan:** sandbox. Pin the release checksum in a mise lockfile once the CI exists; until then the tarball's integrity is GitHub's.
+- **Plan:** sandbox. Pin the release checksum in a mise lockfile; until then the tarball's integrity is GitHub's.
 - **Covers:** `tool:mise`
 
 ### T07. git, gh, flock, python3: the process tooling
-- **What:** `git` and `gh` (the red-check, rebase and push steps of the pinned lander), `flock` (the lander's mutex), `python3` (the trust-ledger checker, the pin checker, the diff judge, the public-readiness lint). They run on the developer's machine and in CI; none is part of any artifact.
+- **What:** `git` and `gh` (the red-check, rebase and push steps of the pinned lander), `flock` (the lander's mutex), `python3` (the trust-ledger checker, the pin checker, the diff judge, the public-readiness lint). They run on the developer's machine; none is part of any artifact.
 - **Enters:** `scripts/land-direct`, `scripts/land/`, `scripts/trust_ledger.py`, `scripts/pinned-lib.py`, `scripts/gate-diff-improving.sh`, the Tier 1 scripts.
 - **Assumes:** they do what their manuals say; the self-tests of the scripts that use them (scratch repositories) are the check that our use of them is right; no written contract.
 - **Test:** scripts/test_protected_set.sh, scripts/test_gate_diff_improving.sh, scripts/test_pinned_lib.sh (each runs the real script against a scratch repository).
@@ -98,10 +98,10 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 ### T09. vbm-json: the verified JSON codec every reply is read through
 - **What:** the library `vbm-json` (https://github.com/witt3rd/vbm-json), a lake dependency at the pinned revision. Its `LeanJson.parseFast` turns the bytes of a reply into a `LeanJson.Value`; its own proofs (the fast parser equals the RFC 8259 reference, the reference is sound and complete) are the basis of every claim here that starts from a parsed value. Its code runs in every decode.
 - **Enters:** `lakefile.lean` (the `require`), `lake-manifest.json`, `scripts/pinned-libs.lock`; `VbmLlm/Wire.lean` imports `LeanJson.Value`, the vector checker calls `LeanJson.parseFast`.
-- **Assumes:** the library's own ledger and its Tier 2 (`leanchecker`, nanoda at the pinned revision); this repository does **not** re-prove them: the gate checks that the bytes are the bytes at the pinned revision (rev, checkout HEAD and the hash of the specification files), never that they were proved. See docs/decisions/0001-vbm-llm.md, section 3.
+- **Assumes:** the library's own ledger and its own independent re-check (`leanchecker`, nanoda at the pinned revision); this repository does **not** re-prove them: the gate checks that the bytes are the bytes at the pinned revision (rev, checkout HEAD and the hash of the specification files), never that they were proved. See docs/decisions/0001-vbm-llm.md, section 3.
 - **Test:** scripts/test_pinned_lib.sh (a stale revision, an edited spec file, a fork, an unlocked package and a malformed lock each fail) and the relabel attacks scripts/attacks/13a-pin-stale-rev.sh, 13b, 13d, 13g, 13h, 13i, 13j.
 - **Owner:** the owner (the lock, its tool and its test are protected paths); upstream vbm-json is the same owner's.
-- **Plan:** verify. Add the library's proof modules to this repository's Tier 2 so the recheck is ours rather than the library's; until then the pin is a trusted-by-hash claim and says so.
+- **Plan:** verify. Re-check the library's proof modules in this repository so the recheck is ours rather than the library's; until then the pin is a trusted-by-hash claim and says so.
 - **Covers:** `pin:vbm-json`
 
 ### T10. vbm-land: the vendored landing tool

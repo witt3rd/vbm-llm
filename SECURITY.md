@@ -7,7 +7,7 @@ vbm-llm is a **pre-release** library. Nothing is published to a package registry
 - A reply that the decoder accepts that the pinned convention (`docs/schemas/`) or the documented policy (`docs/decisions/0001-vbm-llm.md`) says it must refuse, or the reverse.
 - A crash, hang or unbounded memory use on any input.
 - A hole in the proofs: a way to make the ledger (`docs/proof-ledger.md`) claim more than is proved (a forbidden construct that evades the gates, an axiom, a theorem about code that does not run).
-- Anything in the CI workflows that would expose a secret or run untrusted code with privileges.
+- Anything in the tooling this repository runs (`scripts/`, the vendored lander) that would expose a secret or run untrusted code with privileges.
 
 The unverified parts, and what is assumed of them, are listed in `docs/trust-ledger.md`: findings there are expected and welcome. This library is a **wire contract**: it does not talk to a network,
 hold a credential, or decide what to do with a reply, so no key or token belongs in this repository, its tests or its logs.
