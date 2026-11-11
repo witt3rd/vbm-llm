@@ -1,0 +1,17 @@
+{
+  "model": "m",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "hi",
+          "cache_control": {
+            "type": "persistent"
+          }
+        }
+      ]
+    }
+  ]
+}

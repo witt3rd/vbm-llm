@@ -1,0 +1,2 @@
+ok
+{"model":"m","messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":[{"type":"text","text":"What is the weather in Oslo?","cache_control":{"type":"ephemeral"}}]}],"max_completion_tokens":64}

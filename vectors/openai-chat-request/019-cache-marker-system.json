@@ -1,0 +1,21 @@
+{
+  "model": "m",
+  "messages": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a helpful assistant.",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "Hello!"
+    }
+  ]
+}

@@ -109,7 +109,23 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.OpenAI.decode_encode, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessage, ``VbmLlm.OpenAI.decodeTool_encodeTool, ``VbmLlm.OpenAI.decodeMessages_encode, ``VbmLlm.OpenAI.decodeTools_encode,
       ``VbmLlm.OpenAI.decodeToolChoice_encode, ``VbmLlm.OpenAI.decodeIncludeUsage_encode, ``VbmLlm.OpenAI.decodeEach_encode, ``VbmLlm.OpenAI.decodeToolCalls_encode, ``VbmLlm.OpenAI.optBool_orNull,
       ``VbmLlm.OpenAI.optNat_orNull, ``VbmLlm.OpenAI.optNum_orNull]),
-  O "openai-request-bytes-are-the-reference-print" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.Request.encodeBytes_eq]),
+  O "openai-request-bytes-are-the-reference-print" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.Request.encodeBytes_eq, ``VbmLlm.OpenAI.Request.encodeBytesWith_eq]),
+  O "openai-request-a-cache-marker-marks-one-message-and-changes-nothing-else" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content", "openai-chat:ChatCompletionRequestAssistantMessage.content", "openai-chat:ChatCompletionRequestToolMessage.content", "openai-chat:cache-marker"]
+    (.proved [``VbmLlm.OpenAI.encodeWith_none, ``VbmLlm.OpenAI.encodeWith_some_markable, ``VbmLlm.OpenAI.encodeWith_some_unmarkable,
+      ``VbmLlm.OpenAI.encodeMessagesFrom_lt, ``VbmLlm.OpenAI.encodeMessagesFrom_none, ``VbmLlm.OpenAI.encodeMessageMarked_content,
+      ``VbmLlm.OpenAI.markedText?_markedContent, ``VbmLlm.OpenAI.encodeMessage_content_text, ``VbmLlm.OpenAI.markedContent_ne_str,
+      ``VbmLlm.OpenAI.encodeWith_print_cases, ``VbmLlm.OpenAI.markedContent_print, ``VbmLlm.OpenAI.marked_user_witness,
+      ``VbmLlm.OpenAI.unmarkable_witness, ``VbmLlm.OpenAI.marked_ne_plain, ``VbmLlm.OpenAI.encodeMessagesFrom_lt_witness, ``VbmLlm.OpenAI.encodeWith_some_markable_witness]),
+  O "openai-request-a-cache-marker-is-at-most-one-and-the-last-markable-is-the-index-a-caller-wants" ["openai-chat:cache-marker"]
+    (.proved [``VbmLlm.OpenAI.encodeWith_at_most_one_marker, ``VbmLlm.OpenAI.carriesMarker_encodeMessage, ``VbmLlm.OpenAI.carriesMarker_encodeMessageAt,
+      ``VbmLlm.OpenAI.countP_some_le, ``VbmLlm.OpenAI.countP_encodeMessage_zero, ``VbmLlm.OpenAI.lastMarkable_spec, ``VbmLlm.OpenAI.lastMarkable_some_markable,
+      ``VbmLlm.OpenAI.lastMarkable_no_later, ``VbmLlm.OpenAI.lastMarkable_none_iff, ``VbmLlm.OpenAI.lastMarkable_cases,
+      ``VbmLlm.OpenAI.encodeWith_one_marker_witness, ``VbmLlm.OpenAI.encodeWith_at_most_one_marker_witness, ``VbmLlm.OpenAI.lastMarkable_witness, ``VbmLlm.OpenAI.markable_iff]),
+  O "openai-request-a-marked-message-reads-back-as-itself-and-only-a-one-part-text-array-is-a-marker" ["openai-chat:cache-marker", "openai-chat:ChatCompletionRequestUserMessage.content"]
+    (.proved [``VbmLlm.OpenAI.decodeContentStr_ok_iff, ``VbmLlm.OpenAI.decodeContentStr_not_str, ``VbmLlm.OpenAI.decodeReqMessage_user_content,
+      ``VbmLlm.OpenAI.decodeReqMessage_encodeMessageMarked, ``VbmLlm.OpenAI.markerAt_encodeWith_none, ``VbmLlm.OpenAI.markerAt_encodeWith_some,
+      ``VbmLlm.OpenAI.firstMarkedFrom_plain, ``VbmLlm.OpenAI.firstMarkedFrom_set, ``VbmLlm.OpenAI.decodeContentStr_marked_witness,
+      ``VbmLlm.OpenAI.decodeContentStr_two_parts_refused, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessageMarked_witness]),
   O "openai-request-what-decodes-is-written-back-the-same" ["openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.decode_ok_stable, ``VbmLlm.OpenAI.decodeMessages_ne_nil, ``VbmLlm.OpenAI.decodeEach_cons_ne_nil]),
   O "openai-request-decode-fails-closed" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.stream"]
     (.proved [``VbmLlm.OpenAI.Request.decode_not_object, ``VbmLlm.OpenAI.decodeMessages_none, ``VbmLlm.OpenAI.decodeMessages_empty, ``VbmLlm.OpenAI.decodeMessages_not_array,

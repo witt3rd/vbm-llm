@@ -1,0 +1,26 @@
+{
+  "model": "m",
+  "messages": [
+    {
+      "role": "user",
+      "content": "weather in Oslo"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Let me look that up.",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_1",
+      "content": "3 C"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "model": "m",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "part one",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        },
+        {
+          "type": "text",
+          "text": "part two"
+        }
+      ]
+    }
+  ]
+}

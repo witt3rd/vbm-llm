@@ -58,14 +58,16 @@ openai-chat ChatCompletionResponseMessage.function_call ignored deprecated, repl
 openai-chat ChatCompletionResponseMessage.audio ignored
 openai-chat CreateChatCompletionRequest.model policy string, an opaque name; required by the schema and written always, never looked at
 openai-chat CreateChatCompletionRequest.messages read array of messages; required, at least one (the schema's minItems)
-openai-chat ChatCompletionRequestSystemMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
-openai-chat ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content` (the array of text parts is not modelled)
-openai-chat ChatCompletionRequestUserMessage.content policy text only: the string form of `content` (the array of text, image, audio and file parts is not modelled)
-openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present; when the turn is only tool calls it is written as null (some providers refuse the member left out); with no text and no calls it is left out
+openai-chat ChatCompletionRequestSystemMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
+openai-chat ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
+openai-chat ChatCompletionRequestUserMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts (an image, audio or file part, or two text parts) is not modelled and is refused
+openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present, or the one-part marked text array of `cache-marker` when a caller marks the message; when the turn is only tool calls it is written as null (some providers refuse the member left out) and cannot carry a marker (there is no content part to carry it); with no text and no calls it is left out
 openai-chat ChatCompletionRequestAssistantMessage.tool_calls read the calls as the provider sent them (id, `function` type, name, arguments verbatim); left out when there are none
 openai-chat ChatCompletionRequestToolMessage.tool_call_id read string; the id of the call this message answers
-openai-chat ChatCompletionRequestToolMessage.content policy text only: the string form of `content`
+openai-chat ChatCompletionRequestToolMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`
 openai-chat CreateChatCompletionRequest.tools policy array of tools; left out when empty (a server may refuse an empty array)
+openai-chat cache-marker policy one message of `messages` may carry its `content` as the one-part text array `[{"type": "text", "text": <the text>, "cache_control": {"type": "ephemeral"}}]`: a hint that the provider may cache the prompt prefix up to it (some providers cache a prefix only when such a marker is present, and read the whole previous prefix back from the cache on the next call). The encoder writes it only when a caller names the message (`Request.encodeWith`), writes it for a marked message only, writes nothing when the named message has no text or the index names none (a hint is dropped, never refused, and never moved elsewhere), and at most one message of a request carries it; the decoder reads back exactly that one-part shape (any other array is refused, never dropped) `cache_control` is not a member of the pinned document's content parts, so this shape is not the document's: it is the one the providers that need the marker accept, stated here as policy and checked by the vectors
+
 openai-chat ChatCompletionTool.type read always `function`, the only value the schema lists
 openai-chat FunctionObject.name read string; required
 openai-chat FunctionObject.description read string; left out when absent

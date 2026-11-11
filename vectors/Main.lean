@@ -53,7 +53,9 @@ def decodeFile (p : FilePath) : IO String := do
   | .error _ => return "error\nnot JSON (refused by the pinned parser)\n"
   | .ok v => return VbmLlm.OpenAI.renderResult (VbmLlm.OpenAI.decode v)
 
-/-- A request vector: the decoded request is shown as its canonical encoding (the printed `encode`), and the encoding must decode, again from the bytes, to the same canonical text. -/
+/-- A request vector: the decoded request is shown as its canonical encoding (the printed `encode`), and the encoding must decode, again from the bytes, to the same canonical text. The **cache marker
+request** a body carries (`Request.markerAt`) is part of what is read and written back: the canonical encoding is `Request.encodeWith` with that marker, so a marked body stays marked (and a body with no
+marker is exactly `encodeBytes`, since `encodeWith none = encode`). -/
 def decodeRequestFile (p : FilePath) : IO String := do
   let bytes ← IO.FS.readBinFile p
   match LeanJson.parseFast bytes with
@@ -62,13 +64,16 @@ def decodeRequestFile (p : FilePath) : IO String := do
     match VbmLlm.OpenAI.Request.decode v with
     | .error f => return "error\n" ++ f.render ++ "\n"
     | .ok r =>
-      let canon := r.encodeBytes
+      let cacheAt := VbmLlm.OpenAI.Request.markerAt v
+      let canon := r.encodeBytesWith cacheAt
       let text := String.fromUTF8! canon
       match LeanJson.parseFast canon with
       | .error _ => return "round trip FAILED: the encoding is not JSON\n"
       | .ok v2 =>
         match VbmLlm.OpenAI.Request.decode v2 with
-        | .ok r2 => if r2.encodeBytes == r.encodeBytes then return "ok\n" ++ text ++ "\n" else return "round trip FAILED: the encoding reads back differently\n"
+        | .ok r2 =>
+          if r2.encodeBytesWith (VbmLlm.OpenAI.Request.markerAt v2) == canon then return "ok\n" ++ text ++ "\n"
+          else return "round trip FAILED: the encoding reads back differently\n"
         | .error _ => return "round trip FAILED: the encoding is refused\n"
 
 /-- An Anthropic request vector: as the OpenAI one, the decoded request is shown as its canonical encoding, which must decode again, from the bytes, to the same canonical text. -/
@@ -325,6 +330,11 @@ def main (args : List String) : IO UInt32 := do
     if (rwant ++ "x") == (← decodeRequestFile rp) || !rwant.startsWith "ok\n" then IO.eprintln "vbm-llm-vectors: the request check cannot fail (or the first request is not read)"; return 1
     let img ← decodeRequestFile (dir / "openai-chat-request" / "002-image-input.json")
     if !img.startsWith "error\n" then IO.eprintln "vbm-llm-vectors: a message with content parts was not refused"; return 1
+    -- the cache marker: a marked body keeps its marker in the canonical encoding (the check can fail: the same body written with no marker request differs)
+    let mk ← decodeRequestFile (dir / "openai-chat-request" / "020-cache-marker-user.json")
+    if !mk.startsWith "ok\n" || (mk.splitOn "cache_control").length < 2 then IO.eprintln "vbm-llm-vectors: the cache marker was dropped from a marked request"; return 1
+    let nmk ← decodeRequestFile (dir / "openai-chat-request" / "023-assistant-calls-no-text-unmarked.json")
+    if (nmk.splitOn "cache_control").length > 1 then IO.eprintln "vbm-llm-vectors: a request with no marker was written with one"; return 1
     -- the turn checks: the independent pairing check rejects an unanswered call, a stray tool message and a wrong id; a tampered record is rejected; no recorded turn carries a flag
     let k : VbmLlm.OpenAI.ToolCall := ⟨"c1", "f", "{}"⟩
     if pairedOk [.assistant none [k], .user "x"] || pairedOk [.tool "c1" "x"] || pairedOk [.assistant none [k], .tool "c2" "x"] || !pairedOk [.assistant none [k], .tool "c1" "x"] then
