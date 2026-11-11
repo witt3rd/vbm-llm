@@ -57,7 +57,7 @@ theorem openai_reasoning_exceeds_refused (u : Usage) (t : Tokens) (h : u.complet
   intro hc; rw [tokens_ok_iff] at hc; omega
 
 /-- A report with nothing in it is the zero record (a frame with no usage adds nothing). -/
-theorem openai_empty : Usage.tokens ⟨none, none, none, none, none⟩ = .ok Tokens.zero := rfl
+theorem openai_empty : Usage.tokens ⟨none, none, none, none, none, none⟩ = .ok Tokens.zero := rfl
 
 end OpenAI
 end VbmLlm

@@ -7,10 +7,15 @@ reference). The reading rules are stated once, here, and proved in `VbmLlmProofs
 * **A key finds its last binding, or null.** A duplicate key is not an error: the later one wins (the policy `vbm-json` states for duplicates: kept in input order). An absent key reads as `null`.
 * **`null` and an absent key are the same: "not there".** A field the convention marks nullable is never told apart from an absent one.
 * **A count is a plain natural.** A sign, a fraction or an exponent is not a count. Never a float.
+* **A reported amount is the number the provider wrote** (`Amount`, the pinned library's number lexeme): a number written without a minus sign is kept as itself (a fraction and an exponent too: a price is
+  often a small one), without a unit and without a conversion; a number written with one (a `-0` too) is an amount below zero.
 
 The functions are written as scans that carry their answer (no list is rebuilt, no `Option` is allocated on the success path): a decoder built from them allocates no more than the code it replaces. -/
 namespace VbmLlm
 open LeanJson
+
+/-- The JSON number the wire contract reads: the pinned parser's number **lexeme**, kept as the provider wrote it (a sign, an integer part, an optional fraction and exponent), never a float. -/
+abbrev Amount := Number
 
 /-- The last binding of `k` among an object's members, else `acc`. -/
 def go : List (String × Value) → String → Value → Value

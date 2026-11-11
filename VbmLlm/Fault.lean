@@ -25,6 +25,8 @@ inductive Kind where
   | empty
   /-- a string outside the set the convention allows here (the offending text is kept) -/
   | unsupported (got : String)
+  /-- a number below zero where the convention allows none (an amount that cannot be negative) -/
+  | negative
   deriving DecidableEq, Repr
 
 /-- A refusal: `path` is outermost-first (`choices`, `0`, `message`, ...). -/
@@ -57,6 +59,7 @@ def Kind.render : Kind → String
   | .wrongType t => s!"is not {t.render}"
   | .empty => "is empty"
   | .unsupported g => s!"has an unsupported value {g.quote}"
+  | .negative => "is negative"
 
 def Step.render : Step → String
   | .key k => "." ++ k

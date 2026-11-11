@@ -8,7 +8,9 @@ Status: accepted for the scaffold and the first slices (the OpenAI chat-completi
 request and response codecs, the streaming delta fold, the tool-call turn pairing state machine, usage-field arithmetic (`prompt_tokens` **includes** the cache, Anthropic's `input_tokens` **excludes** it) and the finish-reason and error taxonomy.
 
 What is provable is the **wire contract**. What is not is **client behaviour**: that a provider honours a field, that tool arguments are valid JSON or fit their schema, retry, failover and authentication policy, prices, model names and capabilities, cancellation and billing. The library carries none of it:
-no HTTP, no retries, no credentials, no prices, **no model names** (a model is an opaque string), no capability tables. A consumer decides what to do with a reply; the library says what the reply is.
+no HTTP, no retries, no credentials, no price tables, **no model names** (a model is an opaque string), no capability tables. A consumer decides what to do with a reply; the library says what the reply is.
+The one money-shaped thing it does carry is what a provider reports a call **cost** (`usage.cost`): it is read as the provider wrote it, with no unit, no conversion, never multiplied and never combined with
+the token counts, because a consumer that accounts in real money needs the number the provider said. A reported cost that is not a number, or negative, is a typed refusal.
 
 ## 2. Shape
 

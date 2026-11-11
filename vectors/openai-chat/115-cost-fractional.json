@@ -1,0 +1,25 @@
+{
+ "id": "x",
+ "object": "chat.completion",
+ "created": 1,
+ "model": "m",
+ "choices": [
+  {
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "hi"
+   },
+   "finish_reason": "stop"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 3,
+  "completion_tokens": 1,
+  "total_tokens": 4,
+  "cost": 1.68e-05,
+  "cost_details": {
+   "upstream_inference_cost": 1.68e-05
+  }
+ }
+}

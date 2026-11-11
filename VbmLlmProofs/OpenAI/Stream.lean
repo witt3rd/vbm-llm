@@ -235,6 +235,27 @@ theorem foldItems_missing_index (pol : Policy) (c : Chunk) (rest : List Item) (h
 /-- No events: truncated, with nothing received. -/
 theorem foldItems_nil (pol : Policy) : foldItems pol [] = .ok (.truncated State.empty.soFar) := rfl
 
+/-! ### The reported cost through the fold -/
+
+/-- A chunk with one choice, finishing: the stream of the theorem below. -/
+def chunkChoice : Chunk := ⟨some "g", none, [⟨some 0, emptyDelta, some "stop"⟩], none, none, none⟩
+
+/-- The final usage frame of a stream whose provider reported a cost (`1.68e-05`), and no choice. -/
+def chunkCost : Chunk := ⟨some "g", none, [], some ⟨none, none, none, none, none, some costLexeme⟩, none, none⟩
+
+/-- The final usage frame of a stream whose provider reported no cost, and no choice. -/
+def chunkNoCost : Chunk := ⟨some "g", none, [], some ⟨none, none, none, none, none, none⟩, none, none⟩
+
+/-- (d) **The fold of a stream whose final usage frame carries a cost yields that cost** as the usage of the reply, exactly as the counts reach it. -/
+theorem foldItems_cost :
+    foldItems {} [.chunk chunkChoice, .chunk chunkCost, .done] =
+      .ok (.complete ⟨some "g", none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨none, none, none, none, none, some costLexeme⟩, none⟩) := rfl
+
+/-- (d) **The fold of a stream whose final usage frame carries no cost yields `cost = none`**, the counts as they are. -/
+theorem foldItems_no_cost :
+    foldItems {} [.chunk chunkChoice, .chunk chunkNoCost, .done] =
+      .ok (.complete ⟨some "g", none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨none, none, none, none, none, none⟩, none⟩) := rfl
+
 /-! ### Reading a chunk -/
 
 /-- A fragment of another type than `function` is refused, as a whole tool call is. -/

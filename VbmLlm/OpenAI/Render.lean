@@ -18,6 +18,18 @@ def optN (o : Option Nat) : String :=
   | none => "none"
   | some n => toString n
 
+/-- The digits of a lexeme's digit list, as written. -/
+def digitsStr (ds : List LeanJson.Digit) : String := String.ofList (ds.map fun d => Char.ofNat (48 + d.val))
+
+/-- The reported amount, printed as the provider wrote it: sign, integer part, fraction and exponent. -/
+def optC (o : Option Amount) : String :=
+  match o with
+  | none => "none"
+  | some n =>
+    (if n.neg then "-" else "") ++ (match n.int with | .zero => "0" | .nz lead rest => digitsStr (lead.succ :: rest)) ++
+      (match n.frac with | none => "" | some (a, bs) => "." ++ digitsStr (a :: bs)) ++
+      (match n.exp with | none => "" | some (s, a, bs) => "e" ++ (if s then "-" else "") ++ digitsStr (a :: bs))
+
 def ToolCall.render (c : ToolCall) : String := s!"  call id={c.id.quote} name={c.name.quote} arguments={c.arguments.quote}"
 
 def Choice.render (c : Choice) : String :=
@@ -33,7 +45,7 @@ def Usage.render (u : Usage) : String :=
     | .ok t => s!"tokens uncached={t.inputUncached} read={t.inputCacheRead} write={t.inputCacheWrite} output={t.output} reasoning={t.reasoning}"
     | .error (.cachedExceedsPrompt p c) => s!"tokens refused cachedExceedsPrompt prompt={p} cached={c}"
     | .error (.reasoningExceedsCompletion o r) => s!"tokens refused reasoningExceedsCompletion completion={o} reasoning={r}"
-  s!"usage prompt={optN u.promptTokens} completion={optN u.completionTokens} total={optN u.totalTokens} cached={optN u.cachedTokens} reasoning={optN u.reasoningTokens}\n{t}"
+  s!"usage prompt={optN u.promptTokens} completion={optN u.completionTokens} total={optN u.totalTokens} cached={optN u.cachedTokens} reasoning={optN u.reasoningTokens} cost={optC u.cost}\n{t}"
 
 def Response.render (r : Response) : String :=
   String.intercalate "\n" (

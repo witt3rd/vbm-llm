@@ -69,6 +69,11 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.OpenAI.tokens_ok_iff, ``VbmLlm.OpenAI.openai_input_eq_prompt, ``VbmLlm.OpenAI.openai_uncached, ``VbmLlm.OpenAI.openai_read, ``VbmLlm.OpenAI.openai_no_write, ``VbmLlm.OpenAI.openai_output, ``VbmLlm.OpenAI.openai_total]),
   O "usage-a-contradictory-report-is-refused-not-clamped" ["openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
     (.proved [``VbmLlm.OpenAI.openai_cached_exceeds_refused, ``VbmLlm.OpenAI.openai_reasoning_exceeds_refused]),
+  O "openai-usage-reports-the-providers-cost-as-it-wrote-it" ["openrouter-chat:usage-cost", "openrouter-chat:usage-cost-details"]
+    (.proved [``VbmLlm.OpenAI.decodeUsage_ok_iff, ``VbmLlm.OpenAI.optCostOf_ok_iff, ``VbmLlm.OpenAI.amountMember_ok_iff, ``VbmLlm.OpenAI.decodeUsage_cost_some,
+      ``VbmLlm.OpenAI.decodeUsage_cost_none, ``VbmLlm.OpenAI.foldItems_cost, ``VbmLlm.OpenAI.foldItems_no_cost, ``VbmLlm.OpenAI.cost_some, ``VbmLlm.OpenAI.cost_none]),
+  O "openai-usage-a-negative-or-non-numeric-cost-is-refused" ["openrouter-chat:usage-cost"]
+    (.proved [``VbmLlm.OpenAI.optCost_negative, ``VbmLlm.OpenAI.optCost_string, ``VbmLlm.OpenAI.decodeUsage_negative_cost, ``VbmLlm.OpenAI.decodeUsage_string_cost]),
   O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- the error taxonomy and the body of a failed call

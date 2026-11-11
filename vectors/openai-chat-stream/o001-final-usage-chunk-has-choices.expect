@@ -4,5 +4,5 @@ choice index=0 finish="stop" class=complete
   content "Hello"
   refusal none
   reasoning none
-usage prompt=10 completion=3 total=13 cached=4 reasoning=1
+usage prompt=10 completion=3 total=13 cached=4 reasoning=1 cost=0.0001
 tokens uncached=6 read=4 write=0 output=3 reasoning=1

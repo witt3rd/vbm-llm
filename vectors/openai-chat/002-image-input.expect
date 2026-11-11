@@ -4,5 +4,5 @@ choice index=0 finish="stop" class=complete
   content "The image shows a wooden boardwalk path running through a lush green field or meadow. The sky is bright blue with some scattered clouds, giving the scene a serene and peaceful atmosphere. Trees and shrubs are visible in the background."
   refusal none
   reasoning none
-usage prompt=1117 completion=46 total=1163 cached=0 reasoning=0
+usage prompt=1117 completion=46 total=1163 cached=0 reasoning=0 cost=none
 tokens uncached=1117 read=0 write=0 output=46 reasoning=0

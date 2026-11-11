@@ -191,13 +191,132 @@ theorem decodeChoices_ok_iff (xs : List Value) (i : Nat) (cs : List Choice) :
 
 theorem decodeUsage_ok_iff (u : Value) (r : Usage) :
     decodeUsage u = .ok r ↔ optNat u "prompt_tokens" = .ok r.promptTokens ∧ optNat u "completion_tokens" = .ok r.completionTokens ∧ optNat u "total_tokens" = .ok r.totalTokens ∧
-      optDetail u "prompt_tokens_details" "cached_tokens" = .ok r.cachedTokens ∧ optDetail u "completion_tokens_details" "reasoning_tokens" = .ok r.reasoningTokens := by
+      optDetail u "prompt_tokens_details" "cached_tokens" = .ok r.cachedTokens ∧ optDetail u "completion_tokens_details" "reasoning_tokens" = .ok r.reasoningTokens ∧
+      optCost u = .ok r.cost := by
   cases r with
-  | mk p c t ca re =>
+  | mk p c t ca re co =>
     simp only [decodeUsage, bind_ok_iff, pure_ok_iff]
     constructor
-    · rintro ⟨a, ha, b, hb, d, hd, e, he, f, hf, h⟩; cases h; exact ⟨ha, hb, hd, he, hf⟩
-    · rintro ⟨ha, hb, hd, he, hf⟩; exact ⟨_, ha, _, hb, _, hd, _, he, _, hf, rfl⟩
+    · rintro ⟨a, ha, b, hb, d, hd, e, he, f, hf, g, hg, h⟩; cases h; exact ⟨ha, hb, hd, he, hf, hg⟩
+    · rintro ⟨ha, hb, hd, he, hf, hg⟩; exact ⟨_, ha, _, hb, _, hd, _, he, _, hf, _, hg, rfl⟩
+
+/-! ### The reported cost (`usage.cost`)
+
+The lexeme `1.68e-05`, the shape a small price is written in, and the usage objects around it: with the cost, without it, with a negative one, with one that is not a number. -/
+
+/-- `1.68e-05` as a number lexeme. -/
+def costLexeme : Number := ⟨false, .nz 0 [1], some (6, [8]), some (true, 0, [5])⟩
+
+/-- A usage object with a numeric cost and every count. -/
+def usageWithCost : Value :=
+  .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("completion_tokens", .num ⟨false, .nz 1 [], none, none⟩),
+        ("total_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .num costLexeme)]
+
+/-- A usage object with the same counts and no cost. -/
+def usageNoCost : Value :=
+  .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("completion_tokens", .num ⟨false, .nz 1 [], none, none⟩),
+        ("total_tokens", .num ⟨false, .nz 0 [], none, none⟩)]
+
+/-- The usage object of a negative cost (`-0.0001`). -/
+def usageNegativeCost : Value :=
+  .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .num ⟨true, .zero, some (0, [0, 0, 0, 1]), none⟩)]
+
+/-- The usage object of a cost that is not a number (the string `"0.0001"`). -/
+def usageStringCost : Value :=
+  .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .str "0.0001")]
+
+/-- **What the amount reader accepts, exactly**: a lexeme written without a minus sign, read as itself; nothing else. -/
+theorem amountMember_ok_iff (n : Amount) (r : Option Amount) : amountMember n = .ok r ↔ n.neg = false ∧ r = some n := by
+  unfold amountMember
+  by_cases hn : n.neg = true
+  · simp [hn]
+  · have hf : n.neg = false := by simpa using hn
+    simp only [hn, Bool.false_eq_true, ite_false, true_and]
+    exact ⟨fun hr => (Except.ok.inj hr).symm, fun hr => by rw [hr]⟩
+
+/-- **What the cost reader accepts, exactly**: no `cost` (absent or `null`) is no report, and a `cost` is read only when its lexeme is written without a minus sign -- a whole number, a fraction or an
+exponent all are -- and it yields that lexeme itself, the number the provider wrote. -/
+theorem optCostOf_ok_iff (o : Value) (r : Option Amount) :
+    optCostOf o = .ok r ↔ (get o "cost" = .null ∧ r = none) ∨ ∃ n, get o "cost" = .num n ∧ n.neg = false ∧ r = some n := by
+  unfold optCostOf
+  cases h : get o "cost" with
+  | null => exact ⟨fun hr => Or.inl ⟨rfl, (Except.ok.inj hr).symm⟩, fun hr => by rcases hr with ⟨-, rfl⟩ | ⟨n, hn, -⟩ <;> (first | rfl | cases hn)⟩
+  | num n =>
+    rw [amountMember_ok_iff]
+    exact ⟨fun hr => Or.inr ⟨n, rfl, hr.1, hr.2⟩, fun hr => by
+      rcases hr with ⟨hg, -⟩ | ⟨n1, hn, hf, hr⟩
+      · cases hg
+      · cases hn; exact ⟨hf, hr⟩⟩
+  | bool b =>
+    constructor
+    · intro hr; cases hr
+    · rintro (⟨hg, -⟩ | ⟨n, hn, -⟩)
+      · cases hg
+      · cases hn
+  | str s =>
+    constructor
+    · intro hr; cases hr
+    · rintro (⟨hg, -⟩ | ⟨n, hn, -⟩)
+      · cases hg
+      · cases hn
+  | arr xs =>
+    constructor
+    · intro hr; cases hr
+    · rintro (⟨hg, -⟩ | ⟨n, hn, -⟩)
+      · cases hg
+      · cases hn
+  | obj ms =>
+    constructor
+    · intro hr; cases hr
+    · rintro (⟨hg, -⟩ | ⟨n, hn, -⟩)
+      · cases hg
+      · cases hn
+
+/-- (a) **A usage object with a numeric, non-negative `cost` decodes with that number as its `cost`, and every token field exactly as the object without one reads them.** -/
+theorem decodeUsage_cost_some :
+    decodeUsage usageWithCost = .ok ⟨some 1, some 2, some 1, none, none, some costLexeme⟩ := by
+  unfold decodeUsage optCost optCostOf amountMember optNat optDetail get lookup go usageWithCost costLexeme natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- (b) **A usage object without `cost` decodes with `cost = none` and every token field as the object with a cost reads them.** -/
+theorem decodeUsage_cost_none :
+    decodeUsage usageNoCost = .ok ⟨some 1, some 2, some 1, none, none, none⟩ := by
+  unfold decodeUsage optCost optCostOf amountMember optNat optDetail get lookup go usageNoCost natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- (c) **A negative `cost` is refused**, at `cost`, typed as an amount below zero: never repaired, never read as 0. -/
+theorem optCost_negative : optCost usageNegativeCost = .error { path := [.key "cost"], kind := .negative } := by
+  unfold optCost usageNegativeCost optCostOf amountMember get lookup go underStep Fault.under Fault.here
+  rfl
+
+/-- (c) **A `cost` that is not a number is refused**, at `cost`, as not a number: never coerced. -/
+theorem optCost_string : optCost usageStringCost = .error { path := [.key "cost"], kind := .wrongType .number } := by
+  unfold optCost usageStringCost optCostOf get lookup go underStep Fault.under Fault.here
+  rfl
+
+/-- (c) The refusal reaches the usage decode: no `Usage` is decoded from the object whose `cost` is negative. -/
+theorem decodeUsage_negative_cost (r : Usage) : decodeUsage usageNegativeCost ≠ .ok r := by
+  intro hc
+  rw [decodeUsage_ok_iff] at hc
+  obtain ⟨_, _, _, _, _, hcost⟩ := hc
+  rw [optCost_negative] at hcost
+  cases hcost
+
+/-- (c) And so does the refusal of a `cost` that is not a number. -/
+theorem decodeUsage_string_cost (r : Usage) : decodeUsage usageStringCost ≠ .ok r := by
+  intro hc
+  rw [decodeUsage_ok_iff] at hc
+  obtain ⟨_, _, _, _, _, hcost⟩ := hc
+  rw [optCost_string] at hcost
+  cases hcost
+
+/-- A reply with a usage report has that report's cost as its own: the accessor a caller reads. -/
+theorem cost_some (r : Response) (u : Usage) (h : r.usage = some u) : r.cost = u.cost := by
+  unfold Response.cost; rw [h]; rfl
+
+/-- A reply with no usage report has no cost. -/
+theorem cost_none (r : Response) (h : r.usage = none) : r.cost = none := by
+  unfold Response.cost; rw [h]; rfl
 
 theorem decodeUsageOpt_ok_iff (v : Value) (r : Option Usage) :
     decodeUsageOpt v = .ok r ↔ (get v "usage" = .null ∧ r = none) ∨ ∃ ms u, get v "usage" = .obj ms ∧ decodeUsage (.obj ms) = .ok u ∧ r = some u := by

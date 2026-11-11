@@ -14,6 +14,9 @@ Reading rules (the policy, stated once; each is a theorem in `VbmLlmProofs/OpenA
   refused as unsupported, not read as a function call); `arguments` is kept **verbatim as the model wrote it**: JSON text the model may have got wrong, never parsed here (the schema says so itself);
 * a finish reason is kept as the provider's text; `FinishClass.ofWire` (`Finish.lean`) classes it;
 * usage counts are plain naturals when present (a sign, a fraction, an exponent or a string is refused); absent counts stay absent, they are not 0;
+* the **reported cost** of a call is `usage.cost`: the number the provider wrote, read as itself (`Option Amount`, the pinned lexeme) and nothing more (no unit, no conversion, never combined with the counts). Absent or
+  `null` is `none` (a provider that reports no cost); a `cost` that is present but not a number, or negative, is refused (an amount cannot be negative); `usage.cost_details`, the nested breakdown, is not
+  read. The streamed usage frame carries the same `Usage`, so the cost reaches the fold's reply as the counts do (`Chunk.lean`, `Stream.lean`);
 * the model's **reasoning text** is the message's `reasoning` member (OpenRouter's) or its `reasoning_content` member (the other compatible servers'): the first of the two that is present, each of them a string when
   present; the served **provider** is the reply's `provider` member (OpenRouter names the upstream that served the call): an opaque string, read when present, never looked at;
 * unread fields (`logprobs`, `system_fingerprint`, `created`, `service_tier`, annotations, audio, ...) are ignored. -/
@@ -27,13 +30,15 @@ structure ToolCall where
   arguments : String
   deriving DecidableEq, Repr
 
-/-- The usage report. A count is `none` when the provider did not report it. `promptTokens` **includes** the cached ones (`cachedTokens` is a part of it). -/
+/-- The usage report. A count is `none` when the provider did not report it. `promptTokens` **includes** the cached ones (`cachedTokens` is a part of it). `cost` is the amount the provider reported the
+call cost, as it wrote it (`Amount`: the provider's lexeme, not a float and not a unit of ours); `none` when it reported none. -/
 structure Usage where
   promptTokens : Option Nat
   completionTokens : Option Nat
   totalTokens : Option Nat
   cachedTokens : Option Nat
   reasoningTokens : Option Nat
+  cost : Option Amount
   deriving DecidableEq, Repr
 
 /-- The assistant message of a choice. -/
@@ -86,6 +91,21 @@ def optNat (o : Value) (k : String) : Except Fault (Option Nat) :=
     | some m => .ok (some m)
     | none => .error { path := [.key k], kind := .wrongType .natural }
   | _ => .error { path := [.key k], kind := .wrongType .natural }
+
+/-- The amount a number lexeme reports: itself when no minus sign writes it negative; a fault (`negative`) otherwise. -/
+def amountMember (n : Amount) : Except Fault (Option Amount) :=
+  if n.neg then .error (Fault.here .negative) else .ok (some n)
+
+/-- `cost` of a usage object: absent or `null` is no report, a number is `amountMember`, anything else is refused. The path is built on the way out. -/
+def optCostOf (o : Value) : Except Fault (Option Amount) :=
+  match get o "cost" with
+  | .null => .ok none
+  | .num n => amountMember n
+  | _ => .error (Fault.here (.wrongType .number))
+
+/-- An optional amount member (`cost`): the number the provider wrote, as itself, when it is written without a minus sign (a fraction and an exponent are such a number as `1.68e-05` shows); absent or
+`null` is no report; a number written with a minus sign is refused as a negative amount, and so is a value that is not a number. -/
+def optCost (o : Value) : Except Fault (Option Amount) := underStep (.key "cost") (optCostOf o)
 
 /-- A required string member. -/
 def reqStr (o : Value) (k : String) : Except Fault String :=
@@ -171,14 +191,20 @@ def decodeChoices : List Value → Nat → Except Fault (List Choice)
     let cs ← decodeChoices vs (i + 1)
     pure (c :: cs)
 
-/-- The usage object: counts when present. `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` are read from the detail objects when those are present. -/
+/-- The usage object: counts when present, and the reported `cost` when present. `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens` are read from the detail objects
+when those are present. -/
 def decodeUsage (u : Value) : Except Fault Usage := do
   let promptTokens ← optNat u "prompt_tokens"
   let completionTokens ← optNat u "completion_tokens"
   let totalTokens ← optNat u "total_tokens"
   let cachedTokens ← optDetail u "prompt_tokens_details" "cached_tokens"
   let reasoningTokens ← optDetail u "completion_tokens_details" "reasoning_tokens"
-  pure { promptTokens, completionTokens, totalTokens, cachedTokens, reasoningTokens }
+  let cost ← optCost u
+  pure { promptTokens, completionTokens, totalTokens, cachedTokens, reasoningTokens, cost }
+
+/-- **The cost the provider reported for the call**, off the reply itself: `none` when there is no usage report or it reports no cost. This is where a caller reads it (with `VbmLlm.Usage.Tokens` for the
+counts); nothing converts it. -/
+def Response.cost (r : Response) : Option Amount := r.usage.bind (·.cost)
 
 /-- `usage`: absent or `null` is no report; an object is read; anything else is refused. -/
 def decodeUsageOpt (v : Value) : Except Fault (Option Usage) :=

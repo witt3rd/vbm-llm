@@ -209,6 +209,8 @@ anthropic-messages-stream tool-input-from-pieces policy a call's input is the va
 openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
 openrouter-chat reasoning-text policy the model's reasoning text is a message's (or a delta's) `reasoning` member, else its `reasoning_content` alias, each a string when present; in a stream the pieces concatenate in order; `reasoning_details` is not read
 openrouter-chat provider policy the reply's (or chunk's) top-level `provider` string names the upstream that served the call; read when present, the first one seen wins in a stream
+openrouter-chat usage-cost read a JSON number: what the call cost, as the provider wrote it (a fraction and an exponent too, e.g. 1.68e-05); absent is no report (none), and a value that is not a number or is negative is refused, never coerce and never read as 0. No unit, no conversion, never combined with the token counts
+openrouter-chat usage-cost-details ignored the nested breakdown of `usage.cost` (`cost_details`): not read
 openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
 openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)
 openrouter-chat mid-stream-error policy a chunk with a top-level `error` and finish reason `error` ends the stream with HTTP 200; the fold stops there with the message and the partial reply

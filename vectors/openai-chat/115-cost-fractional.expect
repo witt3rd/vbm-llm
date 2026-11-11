@@ -1,0 +1,8 @@
+ok
+response id="x" model="m" provider=none
+choice index=0 finish="stop" class=complete
+  content "hi"
+  refusal none
+  reasoning none
+usage prompt=3 completion=1 total=4 cached=none reasoning=none cost=1.68e-05
+tokens uncached=3 read=0 write=0 output=1 reasoning=0
