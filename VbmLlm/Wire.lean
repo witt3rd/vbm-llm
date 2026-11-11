@@ -8,7 +8,8 @@ reference). The reading rules are stated once, here, and proved in `VbmLlmProofs
 * **`null` and an absent key are the same: "not there".** A field the convention marks nullable is never told apart from an absent one.
 * **A count is a plain natural.** A sign, a fraction or an exponent is not a count. Never a float.
 * **A reported amount is the number the provider wrote** (`Amount`, the pinned library's number lexeme): a number written without a minus sign is kept as itself (a fraction and an exponent too: a price is
-  often a small one), without a unit and without a conversion; a number written with one (a `-0` too) is an amount below zero.
+  often a small one), without a unit and without a conversion; a number **written with a minus sign** is refused. The test is the lexeme's sign flag (`n.neg`), never the value: `-0`, `-0.0` and `-0e5`
+  are zero, not a number below zero, and they carry the flag too, so the refusal is "written with a minus sign" and this library states it that way.
 
 The functions are written as scans that carry their answer (no list is rebuilt, no `Option` is allocated on the success path): a decoder built from them allocates no more than the code it replaces. -/
 namespace VbmLlm

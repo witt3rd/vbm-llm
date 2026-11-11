@@ -6,7 +6,12 @@ import VbmLlmProofs.OpenAI.Response
   no index is refused unless the policy reads it as 0.
 * **Chunk boundaries do not matter** (`pieces_content`, `pieces_arguments`): a text or an arguments string split at any points folds to the same reply as the unsplit one.
 * **The terminal rule**: a stream with no sentinel is never `complete` (`foldWith_no_done`), `complete` only ever comes from a sentinel that is the last event (`foldItems_complete`), an event after the
-  sentinel is refused (`foldItems_after_done`), an error chunk stops the fold with the partial reply (`foldItems_error_chunk`). -/
+  sentinel is refused (`foldItems_after_done`), an error chunk stops the fold with the partial reply (`foldItems_error_chunk`).
+* **The reported cost through the fold** (`foldItems_cost`, `foldItems_no_cost`, `foldItems_cost_then_no_cost`, `foldItems_cost_with_choice`): the reply's usage carries the cost of the last usage frame, as
+  it carries the counts (a later frame with no cost drops an earlier one's, as every count is dropped).
+* **And from a frame's own bytes** (`costFrameValue_parses`, `decodeChunk_costFrame`, `decodeChunk_costFrame_usage`, `foldEvents_cost_frames`, `foldEvents_negCostFrame`, `foldEvents_strCostFrame`): a
+  streamed frame is JSON text, decoded by the pinned parser and then by `decodeChunk`; a cost written with a minus sign, or one that is not a number, makes the chunk (and so the fold) a fault at
+  `usage.cost`. -/
 namespace VbmLlm.OpenAI
 open LeanJson
 
@@ -240,21 +245,143 @@ theorem foldItems_nil (pol : Policy) : foldItems pol [] = .ok (.truncated State.
 /-- A chunk with one choice, finishing: the stream of the theorem below. -/
 def chunkChoice : Chunk := ⟨some "g", none, [⟨some 0, emptyDelta, some "stop"⟩], none, none, none⟩
 
-/-- The final usage frame of a stream whose provider reported a cost (`1.68e-05`), and no choice. -/
+/-- The final usage frame of a stream whose provider reported a cost (the lexeme `1.68e-05`), and no choice. -/
 def chunkCost : Chunk := ⟨some "g", none, [], some ⟨none, none, none, none, none, some costLexeme⟩, none, none⟩
 
 /-- The final usage frame of a stream whose provider reported no cost, and no choice. -/
 def chunkNoCost : Chunk := ⟨some "g", none, [], some ⟨none, none, none, none, none, none⟩, none, none⟩
 
-/-- (d) **The fold of a stream whose final usage frame carries a cost yields that cost** as the usage of the reply, exactly as the counts reach it. -/
+/-- (d) **The fold of this stream — `chunkChoice`, then the usage frame `chunkCost`, then the sentinel — yields that cost** as the usage of the reply, exactly as the counts reach it. (The chunk is built
+here; `decodeChunk_costFrame` and `foldEvents_cost_frames` below do the same from a frame's own bytes.) -/
 theorem foldItems_cost :
     foldItems {} [.chunk chunkChoice, .chunk chunkCost, .done] =
       .ok (.complete ⟨some "g", none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨none, none, none, none, none, some costLexeme⟩, none⟩) := rfl
 
-/-- (d) **The fold of a stream whose final usage frame carries no cost yields `cost = none`**, the counts as they are. -/
+/-- (d) **The fold of the same stream with `chunkNoCost` yields `cost = none`**, the counts as they are. A later frame replaces an earlier one wholesale, so a later usage frame with no cost drops a cost
+an earlier one carried (`foldItems_cost_then_no_cost`): last usage wins, as for every count. -/
 theorem foldItems_no_cost :
     foldItems {} [.chunk chunkChoice, .chunk chunkNoCost, .done] =
       .ok (.complete ⟨some "g", none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨none, none, none, none, none, none⟩, none⟩) := rfl
+
+/-! ### The cost of a frame, from its bytes
+
+* **A streamed frame is JSON text before it is a `Chunk`.** The theorems above use hand-built `Chunk` values; these carry the cost from the text a provider sends, through the pinned parser
+(`LeanJson.parseFast`) and `decodeChunk`, and through the fold, so nothing here rests on how the frame was built. -/
+
+/-- A usage frame's text: a choice with the finish reason, and a usage report with the cost, written as the provider writes it (the shape of the last frame of an OpenRouter stream). -/
+def costFrameText : String := "{\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1,\"cost\":1.68e-05}}"
+
+/-- The bytes of that text, decided (not asserted): the parse below is a parse of these bytes. -/
+theorem costFrameText_bytes : costFrameText.toUTF8 = ⟨([0x7B, 0x22, 0x63, 0x68, 0x6F, 0x69, 0x63, 0x65, 0x73, 0x22, 0x3A, 0x5B, 0x7B, 0x22, 0x69, 0x6E, 0x64, 0x65, 0x78, 0x22, 0x3A, 0x30, 0x2C, 0x22, 0x64, 0x65, 0x6C, 0x74, 0x61, 0x22, 0x3A, 0x7B, 0x7D, 0x2C, 0x22, 0x66, 0x69, 0x6E, 0x69, 0x73, 0x68, 0x5F, 0x72, 0x65, 0x61, 0x73, 0x6F, 0x6E, 0x22, 0x3A, 0x22, 0x73, 0x74, 0x6F, 0x70, 0x22, 0x7D, 0x5D, 0x2C, 0x22, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22, 0x3A, 0x7B, 0x22, 0x70, 0x72, 0x6F, 0x6D, 0x70, 0x74, 0x5F, 0x74, 0x6F, 0x6B, 0x65, 0x6E, 0x73, 0x22, 0x3A, 0x31, 0x2C, 0x22, 0x63, 0x6F, 0x73, 0x74, 0x22, 0x3A, 0x31, 0x2E, 0x36, 0x38, 0x65, 0x2D, 0x30, 0x35, 0x7D, 0x7D] : List UInt8).toArray⟩ := by unfold costFrameText; decide
+
+/-- The frame as the value the pinned parser gives for those bytes. -/
+def costFrameValue : Value := .obj [("choices", .arr [.obj [("index", .num ⟨false, .zero, none, none⟩), ("delta", .obj []), ("finish_reason", .str "stop")]]),
+  ("usage", .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .num costLexeme)])]
+
+/-- **The pinned parser reads the frame's text as that value**, so the decode below is a decode of a frame's bytes and not of a hand-built value. -/
+theorem costFrameValue_parses : LeanJson.parseFast costFrameText.toUTF8 = .ok costFrameValue := by
+  rw [costFrameText_bytes, LeanJson.parseFast_list]; rfl
+
+/-- **A streamed frame's usage reaches the chunk with its cost**: `decodeChunk` of the frame gives the chunk whose usage carries the lexeme, at `cost`. -/
+theorem decodeChunk_costFrame : decodeChunk costFrameValue =
+    .ok ⟨none, none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨some 1, none, none, none, none, some costLexeme⟩, none, none⟩ := by
+  unfold costFrameValue decodeChunk decodeChunkChoices decodeChunkChoice decodeDelta decodeUsageOpt decodeUsage
+    optCost optCostOf amountMember optNat optDetail optStr emptyDelta errorOf get lookup go natOf digitsVal
+    underStep Fault.under Fault.here
+  rfl
+
+/-- **The chunk a frame decodes to has that cost in its usage**, whatever else the chunk holds: read off the decoder, not off a hand-built value. -/
+theorem decodeChunk_costFrame_usage (c : Chunk) (h : decodeChunk costFrameValue = .ok c) :
+    ∃ u, c.usage = some u ∧ u.cost = some costLexeme := by
+  rw [decodeChunk_costFrame] at h
+  cases h
+  exact ⟨_, rfl, rfl⟩
+
+/-- A usage frame's text whose `cost` is written with a minus sign. -/
+def negCostFrameText : String := "{\"usage\":{\"cost\":-1}}"
+
+/-- That frame as the value the pinned parser gives for those bytes. -/
+def negCostFrameValue : Value := .obj [("usage", .obj [("cost", .num ⟨true, .nz 0 [], none, none⟩)])]
+
+/-- The bytes of that text, decided. -/
+theorem negCostFrameText_bytes : negCostFrameText.toUTF8 = ⟨([0x7B, 0x22, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22, 0x3A, 0x7B, 0x22, 0x63, 0x6F, 0x73, 0x74, 0x22, 0x3A, 0x2D, 0x31, 0x7D, 0x7D] : List UInt8).toArray⟩ := by unfold negCostFrameText; decide
+
+/-- The pinned parser reads that text as `negCostFrameValue`. -/
+theorem negCostFrameValue_parses : LeanJson.parseFast negCostFrameText.toUTF8 = .ok negCostFrameValue := by
+  rw [negCostFrameText_bytes, LeanJson.parseFast_list]; rfl
+
+/-- **A frame whose `cost` is written with a minus sign decodes to no chunk**: the refusal, at `usage.cost`, typed `negative`. -/
+theorem decodeChunk_negCostFrame : decodeChunk negCostFrameValue = .error { path := [.key "usage", .key "cost"], kind := .negative } := by
+  unfold negCostFrameValue decodeChunk decodeUsageOpt decodeUsage optCost optCostOf amountMember optNat optDetail optStr
+    errorOf get lookup go natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- No chunk at all decodes from it. -/
+theorem decodeChunk_negCostFrame_refused (c : Chunk) : decodeChunk negCostFrameValue ≠ .ok c := by
+  rw [decodeChunk_negCostFrame]; intro h; cases h
+
+/-- A usage frame's text whose `cost` is not a number (the string `"0.0001"`). -/
+def strCostFrameText : String := "{\"usage\":{\"cost\":\"0.0001\"}}"
+
+/-- That frame as the value the pinned parser gives for those bytes. -/
+def strCostFrameValue : Value := .obj [("usage", .obj [("cost", .str "0.0001")])]
+
+/-- The bytes of that text, decided. -/
+theorem strCostFrameText_bytes : strCostFrameText.toUTF8 = ⟨([0x7B, 0x22, 0x75, 0x73, 0x61, 0x67, 0x65, 0x22, 0x3A, 0x7B, 0x22, 0x63, 0x6F, 0x73, 0x74, 0x22, 0x3A, 0x22, 0x30, 0x2E, 0x30, 0x30, 0x30, 0x31, 0x22, 0x7D, 0x7D] : List UInt8).toArray⟩ := by unfold strCostFrameText; decide
+
+/-- The pinned parser reads that text as `strCostFrameValue`. -/
+theorem strCostFrameValue_parses : LeanJson.parseFast strCostFrameText.toUTF8 = .ok strCostFrameValue := by
+  rw [strCostFrameText_bytes, LeanJson.parseFast_list]; rfl
+
+/-- **A frame whose `cost` is not a number decodes to no chunk**: refused at `usage.cost` as not a number. -/
+theorem decodeChunk_strCostFrame : decodeChunk strCostFrameValue = .error { path := [.key "usage", .key "cost"], kind := .wrongType .number } := by
+  unfold strCostFrameValue decodeChunk decodeUsageOpt decodeUsage optCost optCostOf amountMember optNat optDetail optStr
+    errorOf get lookup go natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- No chunk at all decodes from it. -/
+theorem decodeChunk_strCostFrame_refused (c : Chunk) : decodeChunk strCostFrameValue ≠ .ok c := by
+  rw [decodeChunk_strCostFrame]; intro h; cases h
+
+/-- A later usage frame with no cost replaces an earlier one that had a cost (the last non-null `usage` wins, as for the counts): the reply carries `cost = none`. -/
+theorem foldItems_cost_then_no_cost :
+    foldItems {} [.chunk chunkChoice, .chunk chunkCost, .chunk chunkNoCost, .done] =
+      .ok (.complete ⟨some "g", none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨none, none, none, none, none, none⟩, none⟩) := rfl
+
+/-- A two-chunk stream whose usage chunk carries a cost **and** a choice (the shape of a final frame beside a content frame) reaches the reply's usage through the fold. -/
+theorem foldItems_cost_with_choice :
+    foldItems {} [.chunk ⟨none, none, [⟨some 0, ⟨some "a", none, [], none⟩, some "stop"⟩], none, none, none⟩,
+      .chunk ⟨none, none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨some 1, none, none, none, none, some costLexeme⟩, none, none⟩, .done] =
+      .ok (.complete ⟨none, none, [⟨some 0, ⟨some "a", none, [], none⟩, some "stop"⟩], some ⟨some 1, none, none, none, none, some costLexeme⟩, none⟩) := rfl
+
+/-- That usage frame alone, folded through `foldEvents` (`parse` is the pinned parser on the frame's own text): the partial reply (`truncated`: no sentinel came) carries the cost in its usage, so the
+cost reaches the reply from the bytes. -/
+theorem foldEvents_cost_frames :
+    foldEvents {} (fun s => (LeanJson.parseFast s.toUTF8).toOption) [⟨"", costFrameText, none⟩] =
+      .ok (.truncated ⟨none, none, [⟨some 0, ⟨none, none, [], none⟩, some "stop"⟩], some ⟨some 1, none, none, none, none, some costLexeme⟩, none⟩) := by
+  simp only [foldEvents, foldWith, decodeItem, List.isEmpty_nil]
+  rw [show LeanJson.parseFast costFrameText.toUTF8 = .ok costFrameValue from costFrameValue_parses]
+  simp only [decodeChunk_costFrame, Except.toOption]
+  simp [costFrameText, applyChunk, applyChoices, choiceIndex, applyChoice, applyCalls, upd, newChoice, State.empty,
+    State.soFar, ChoiceAcc.soFar, firstOpt, appendOpt]
+
+/-- A frame whose cost is written with a minus sign makes the fold a fault naming the frame, at `usage.cost`: `(c)` at the frame, not only at the usage object. -/
+theorem foldEvents_negCostFrame :
+    foldEvents {} (fun s => (LeanJson.parseFast s.toUTF8).toOption) [⟨"", negCostFrameText, none⟩] =
+      .error (.chunk 0 { path := [.key "usage", .key "cost"], kind := .negative }) := by
+  simp only [foldEvents, foldWith, decodeItem, List.isEmpty_nil]
+  rw [show LeanJson.parseFast negCostFrameText.toUTF8 = .ok negCostFrameValue from negCostFrameValue_parses]
+  simp only [decodeChunk_negCostFrame, Except.toOption]
+  simp [negCostFrameText]
+
+/-- And a frame whose cost is not a number, likewise. -/
+theorem foldEvents_strCostFrame :
+    foldEvents {} (fun s => (LeanJson.parseFast s.toUTF8).toOption) [⟨"", strCostFrameText, none⟩] =
+      .error (.chunk 0 { path := [.key "usage", .key "cost"], kind := .wrongType .number }) := by
+  simp only [foldEvents, foldWith, decodeItem, List.isEmpty_nil]
+  rw [show LeanJson.parseFast strCostFrameText.toUTF8 = .ok strCostFrameValue from strCostFrameValue_parses]
+  simp only [decodeChunk_strCostFrame, Except.toOption]
+  simp [strCostFrameText]
 
 /-! ### Reading a chunk -/
 

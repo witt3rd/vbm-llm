@@ -1,5 +1,6 @@
 import VbmLlm.OpenAI.Response
 import VbmLlmProofs.Wire
+import LeanJsonProofs.Fast
 /-! # Proofs about the OpenAI chat-completions response decoder
 
 Each theorem is a clause of the contract (`VbmLlm/OpenAI/Response.lean`, the header), stated of the decoder that runs. `*_ok_iff` says exactly what a value must be for a decode to succeed, and what it yields;
@@ -202,10 +203,29 @@ theorem decodeUsage_ok_iff (u : Value) (r : Usage) :
 
 /-! ### The reported cost (`usage.cost`)
 
-The lexeme `1.68e-05`, the shape a small price is written in, and the usage objects around it: with the cost, without it, with a negative one, with one that is not a number. -/
+The lexeme `1.68e-05`, the shape a small price is written in — as the pinned parser reads it from those bytes (`costLexeme_bytes`), so the brief's example is checked on the real text and not only on a
+hand-built value — and the usage objects around it: with the cost, without it, with a minus sign, with one that is not a number. The `-0` case has a theorem of its own (`optCost_negZero`): it is zero and
+it is refused, because the reader decides on the sign flag of the lexeme. -/
 
-/-- `1.68e-05` as a number lexeme. -/
-def costLexeme : Number := ⟨false, .nz 0 [1], some (6, [8]), some (true, 0, [5])⟩
+/-- `1.68e-05` as a number lexeme: no sign, the integer part `1` (`.nz 0 []`: the digit `0 + 1` and no more digits, the way `.nz 0 []` reads `1` elsewhere in this file), the fraction `.68`, the exponent
+`e-05`. -/
+def costLexeme : Number := ⟨false, .nz 0 [], some (6, [8]), some (true, 0, [5])⟩
+
+/-- **The lexeme above is what the pinned parser reads from the provider's own bytes**: `1.68e-05` as text, through `LeanJson.parseFast`. (The reference parser is `rfl` on the byte list and the fast
+parser is proved equal to it on every input, `LeanJsonProofs.parseFast_list`, so this is a decision procedure on the two, not a guess at the encoding.) -/
+theorem costLexeme_bytes : LeanJson.parseFast "1.68e-05".toUTF8 = .ok (.num costLexeme) := by
+  have h : "1.68e-05".toUTF8 = ⟨([0x31, 0x2E, 0x36, 0x38, 0x65, 0x2D, 0x30, 0x35] : List UInt8).toArray⟩ := by decide
+  rw [h, LeanJson.parseFast_list]
+  rfl
+
+/-- `-0` as a number lexeme: the parser keeps the sign flag and the value zero. -/
+def negZeroLexeme : Number := ⟨true, .zero, none, none⟩
+
+/-- **`-0` is the lexeme with the sign flag set and the value zero**, as the pinned parser reads it from the bytes: what it writes is zero (`writesZero_negZero`), so it is not a number below zero. -/
+theorem negZeroLexeme_bytes : LeanJson.parseFast "-0".toUTF8 = .ok (.num negZeroLexeme) := by
+  have h : "-0".toUTF8 = ⟨([0x2D, 0x30] : List UInt8).toArray⟩ := by decide
+  rw [h, LeanJson.parseFast_list]
+  rfl
 
 /-- A usage object with a numeric cost and every count. -/
 def usageWithCost : Value :=
@@ -217,7 +237,7 @@ def usageNoCost : Value :=
   .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("completion_tokens", .num ⟨false, .nz 1 [], none, none⟩),
         ("total_tokens", .num ⟨false, .nz 0 [], none, none⟩)]
 
-/-- The usage object of a negative cost (`-0.0001`). -/
+/-- The usage object of a cost written with a minus sign (`-0.0001`). -/
 def usageNegativeCost : Value :=
   .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .num ⟨true, .zero, some (0, [0, 0, 0, 1]), none⟩)]
 
@@ -225,7 +245,8 @@ def usageNegativeCost : Value :=
 def usageStringCost : Value :=
   .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .str "0.0001")]
 
-/-- **What the amount reader accepts, exactly**: a lexeme written without a minus sign, read as itself; nothing else. -/
+/-- **What the amount reader accepts, exactly**: a lexeme written without a minus sign, read as itself; nothing else. The condition is `n.neg = false`, the sign flag of the lexeme: it is not a
+statement about the value (a `-0` is zero and carries the flag). -/
 theorem amountMember_ok_iff (n : Amount) (r : Option Amount) : amountMember n = .ok r ↔ n.neg = false ∧ r = some n := by
   unfold amountMember
   by_cases hn : n.neg = true
@@ -235,7 +256,7 @@ theorem amountMember_ok_iff (n : Amount) (r : Option Amount) : amountMember n = 
     exact ⟨fun hr => (Except.ok.inj hr).symm, fun hr => by rw [hr]⟩
 
 /-- **What the cost reader accepts, exactly**: no `cost` (absent or `null`) is no report, and a `cost` is read only when its lexeme is written without a minus sign -- a whole number, a fraction or an
-exponent all are -- and it yields that lexeme itself, the number the provider wrote. -/
+exponent all are -- and it yields that lexeme itself, the number the provider wrote. "Written without a minus sign" is the sign flag (`n.neg = false`), not the value. -/
 theorem optCostOf_ok_iff (o : Value) (r : Option Amount) :
     optCostOf o = .ok r ↔ (get o "cost" = .null ∧ r = none) ∨ ∃ n, get o "cost" = .num n ∧ n.neg = false ∧ r = some n := by
   unfold optCostOf
@@ -272,19 +293,20 @@ theorem optCostOf_ok_iff (o : Value) (r : Option Amount) :
       · cases hg
       · cases hn
 
-/-- (a) **A usage object with a numeric, non-negative `cost` decodes with that number as its `cost`, and every token field exactly as the object without one reads them.** -/
+/-- (a) **The usage object `usageWithCost` decodes with that number as its `cost`**, and its counts are the counts (b) reads off `usageNoCost` (the same object without a cost). -/
 theorem decodeUsage_cost_some :
     decodeUsage usageWithCost = .ok ⟨some 1, some 2, some 1, none, none, some costLexeme⟩ := by
   unfold decodeUsage optCost optCostOf amountMember optNat optDetail get lookup go usageWithCost costLexeme natOf digitsVal underStep Fault.under Fault.here
   rfl
 
-/-- (b) **A usage object without `cost` decodes with `cost = none` and every token field as the object with a cost reads them.** -/
+/-- (b) **The usage object `usageNoCost` decodes with `cost = none`**, and its counts are those (a) reads off `usageWithCost`. -/
 theorem decodeUsage_cost_none :
     decodeUsage usageNoCost = .ok ⟨some 1, some 2, some 1, none, none, none⟩ := by
   unfold decodeUsage optCost optCostOf amountMember optNat optDetail get lookup go usageNoCost natOf digitsVal underStep Fault.under Fault.here
   rfl
 
-/-- (c) **A negative `cost` is refused**, at `cost`, typed as an amount below zero: never repaired, never read as 0. -/
+/-- (c) **A `cost` written with a minus sign is refused**, at `cost`, typed `negative`: never repaired, never read as 0. The reader decides on the lexeme's sign flag, so this theorem says "a minus
+sign is refused"; it does not say the value is below zero (a `-0` is refused too, and it is zero: `optCost_negZero`). -/
 theorem optCost_negative : optCost usageNegativeCost = .error { path := [.key "cost"], kind := .negative } := by
   unfold optCost usageNegativeCost optCostOf amountMember get lookup go underStep Fault.under Fault.here
   rfl
@@ -294,7 +316,7 @@ theorem optCost_string : optCost usageStringCost = .error { path := [.key "cost"
   unfold optCost usageStringCost optCostOf get lookup go underStep Fault.under Fault.here
   rfl
 
-/-- (c) The refusal reaches the usage decode: no `Usage` is decoded from the object whose `cost` is negative. -/
+/-- (c) The refusal reaches the usage decode: no `Usage` is decoded from the object whose `cost` is written with a minus sign. -/
 theorem decodeUsage_negative_cost (r : Usage) : decodeUsage usageNegativeCost ≠ .ok r := by
   intro hc
   rw [decodeUsage_ok_iff] at hc
@@ -317,6 +339,111 @@ theorem cost_some (r : Response) (u : Usage) (h : r.usage = some u) : r.cost = u
 /-- A reply with no usage report has no cost. -/
 theorem cost_none (r : Response) (h : r.usage = none) : r.cost = none := by
   unfold Response.cost; rw [h]; rfl
+
+/-- The lexeme writes the number zero: the integer part is `0` and every fraction digit is `0`. The property the fault's wording is about — `-0`, `-0.0` and `-0e5` all write zero, and none of them
+is "below zero". (Its exponent is not read: the definition says what the digits write, and the theorems below name the three shapes.) -/
+def writesZero (n : Number) : Prop :=
+  n.int = .zero ∧ ∀ d ∈ (match n.frac with | none => [] | some (a, bs) => a :: bs), d.val = 0
+
+/-- `-0` writes zero: its integer part is `0` and it has no fraction digit. -/
+theorem writesZero_negZero : writesZero negZeroLexeme := ⟨rfl, by simp [negZeroLexeme]⟩
+
+/-- `-0.0` writes zero too. -/
+theorem writesZero_negZeroDot : writesZero ⟨true, .zero, some (0, []), none⟩ := ⟨rfl, by simp⟩
+
+/-- And so does `-0e5`. -/
+theorem writesZero_negZeroExp : writesZero ⟨true, .zero, none, some (false, 5, [])⟩ := ⟨rfl, by simp⟩
+
+/-- `-0.0` as the pinned parser reads it from the bytes (the sign flag and the value zero, as `-0` is). -/
+theorem negZeroDot_bytes : LeanJson.parseFast "-0.0".toUTF8 = .ok (.num ⟨true, .zero, some (0, []), none⟩) := by
+  have h : "-0.0".toUTF8 = ⟨([0x2D, 0x30, 0x2E, 0x30] : List UInt8).toArray⟩ := by decide
+  rw [h, LeanJson.parseFast_list]; rfl
+
+/-- `-0e5` as the pinned parser reads it: the value is still zero, and the exponent does not make it negative. -/
+theorem negZeroExp_bytes : LeanJson.parseFast "-0e5".toUTF8 = .ok (.num ⟨true, .zero, none, some (false, 5, [])⟩) := by
+  have h : "-0e5".toUTF8 = ⟨([0x2D, 0x30, 0x65, 0x35] : List UInt8).toArray⟩ := by decide
+  rw [h, LeanJson.parseFast_list]; rfl
+
+/-- **`-0.0` is refused too**, for its sign: the same refusal as `-0`. -/
+theorem optCost_negZeroDot : optCost (.obj [("cost", .num ⟨true, .zero, some (0, []), none⟩)]) =
+    .error { path := [.key "cost"], kind := .negative } := by
+  unfold optCost optCostOf amountMember get lookup go underStep Fault.under Fault.here
+  rfl
+
+/-- **And `-0e5`**: the exponent does not make zero negative, and the sign is still refused. (The three zeros written with a minus sign — `-0`, `-0.0`, `-0e5` — all write zero and all are refused for
+the sign, which is what the fault kind and its text say.) -/
+theorem optCost_negZeroExp : optCost (.obj [("cost", .num ⟨true, .zero, none, some (false, 5, [])⟩)]) =
+    .error { path := [.key "cost"], kind := .negative } := by
+  unfold optCost optCostOf amountMember get lookup go underStep Fault.under Fault.here
+  rfl
+
+/-- A lexeme whose sign flag is set is refused, whatever its value: this is the reader's rule, and the value never enters it. -/
+theorem amountMember_neg (n : Amount) (h : n.neg = true) (r : Option Amount) : amountMember n ≠ .ok r := by
+  intro hc; rw [amountMember_ok_iff] at hc; rw [h] at hc; cases hc.1
+
+/-- The usage object of the cost `-0`: a zero written with a minus sign. -/
+def usageNegZeroCost : Value :=
+  .obj [("prompt_tokens", .num ⟨false, .nz 0 [], none, none⟩), ("cost", .num negZeroLexeme)]
+
+/-- **A `-0` cost is refused**: not because a value is below zero (the lexeme's integer part is `.zero` and it has no fraction or exponent, so what it writes is zero: `negZeroLexeme`) but because it
+is written with a minus sign. Decided on purpose: the library reads the provider's lexeme and never a float, so it refuses the sign rather than guessing that `-0` means `0`. -/
+theorem optCost_negZero : optCost usageNegZeroCost = .error { path := [.key "cost"], kind := .negative } := by
+  unfold optCost usageNegZeroCost optCostOf amountMember negZeroLexeme get lookup go underStep Fault.under Fault.here
+  rfl
+
+/-- And it reaches the usage decode: no `Usage` is decoded from an object whose `cost` is `-0`. -/
+theorem decodeUsage_negZero_cost (r : Usage) : decodeUsage usageNegZeroCost ≠ .ok r := by
+  intro hc
+  rw [decodeUsage_ok_iff] at hc
+  obtain ⟨_, _, _, _, _, hcost⟩ := hc
+  rw [optCost_negZero] at hcost
+  cases hcost
+
+/-- A whole reply that reports the cost `1.68e-05`: an object with an `id`, one choice and a usage object. -/
+def replyWithCost : Value :=
+  .obj [("id", .str "x"), ("choices", .arr [.obj [("index", .num ⟨false, .zero, none, none⟩), ("message", .obj [("role", .str "assistant"), ("content", .str "hi")]), ("finish_reason", .str "stop")]]),
+        ("usage", usageWithCost)]
+
+/-- The same reply with no `cost` in its usage. -/
+def replyNoCost : Value :=
+  .obj [("id", .str "x"), ("choices", .arr [.obj [("index", .num ⟨false, .zero, none, none⟩), ("message", .obj [("role", .str "assistant"), ("content", .str "hi")]), ("finish_reason", .str "stop")]]),
+        ("usage", usageNoCost)]
+
+/-- **A whole reply decodes with the reported cost in its usage**: `decode` of a reply that carries `usage.cost` yields a `Response` with that usage. -/
+theorem decode_reply_cost :
+    decode replyWithCost = .ok ⟨some "x", none, [⟨some 0, ⟨some "hi", none, [], none⟩, some "stop"⟩],
+      some ⟨some 1, some 2, some 1, none, none, some costLexeme⟩, none⟩ := by
+  unfold decode decodeChoicesField decodeChoices decodeChoice decodeMessage decodeCalls decodeToolCalls
+    optStr optNat optReasoning decodeUsageOpt decodeUsage optDetail optCost optCostOf amountMember reqObj
+    replyWithCost usageWithCost get lookup go natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- **The accessor a caller reads, on a decoded reply**: the cost of a whole reply comes off `decode` as the lexeme the provider wrote. This is the theorem that connects `Response.cost` to the decoder (it
+was missing: the accessor had only its own two lemmas). -/
+theorem decode_reply_cost_accessor : (decode replyWithCost).map Response.cost = .ok (some costLexeme) := by
+  rw [decode_reply_cost]; rfl
+
+/-- A whole reply that reports no cost decodes with `cost = none`: the other half of the same fact, on a decoded reply. -/
+theorem decode_reply_noCost :
+    decode replyNoCost = .ok ⟨some "x", none, [⟨some 0, ⟨some "hi", none, [], none⟩, some "stop"⟩],
+      some ⟨some 1, some 2, some 1, none, none, none⟩, none⟩ := by
+  unfold decode decodeChoicesField decodeChoices decodeChoice decodeMessage decodeCalls decodeToolCalls
+    optStr optNat optReasoning decodeUsageOpt decodeUsage optDetail optCost optCostOf amountMember reqObj
+    replyNoCost usageNoCost get lookup go natOf digitsVal underStep Fault.under Fault.here
+  rfl
+
+/-- The accessor on that decoded reply: no usage cost reported, no cost off the reply. -/
+theorem decode_reply_noCost_accessor : (decode replyNoCost).map Response.cost = .ok none := by
+  rw [decode_reply_noCost]; rfl
+
+/-- `cost_some` applied to a concrete reply that has a usage report (its hypothesis holds), so the theorem is not vacuous; `decode_reply_cost_accessor` is the same fact for the reply `decode` returns. -/
+theorem cost_some_witness :
+    (⟨some "x", none, [], some ⟨some 1, some 2, some 1, none, none, some costLexeme⟩, none⟩ : Response).cost = some costLexeme := by
+  rw [cost_some _ _ rfl]
+
+/-- `cost_none` applied to a reply with no usage report: its hypothesis holds too. -/
+theorem cost_none_witness : (⟨some "x", none, [], none, none⟩ : Response).cost = none :=
+  cost_none _ rfl
 
 theorem decodeUsageOpt_ok_iff (v : Value) (r : Option Usage) :
     decodeUsageOpt v = .ok r ↔ (get v "usage" = .null ∧ r = none) ∨ ∃ ms u, get v "usage" = .obj ms ∧ decodeUsage (.obj ms) = .ok u ∧ r = some u := by

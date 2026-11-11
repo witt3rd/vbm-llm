@@ -25,7 +25,8 @@ inductive Kind where
   | empty
   /-- a string outside the set the convention allows here (the offending text is kept) -/
   | unsupported (got : String)
-  /-- a number below zero where the convention allows none (an amount that cannot be negative) -/
+  /-- a number **written with a minus sign** where the convention allows no negative amount. The test is the sign flag of the lexeme, not the value: a `-0` carries it too, and a reported amount is
+  read as the lexeme the provider wrote, never as a float, so this kind means "written negative", not "below zero" -/
   | negative
   deriving DecidableEq, Repr
 
@@ -54,12 +55,13 @@ def Ty.render : Ty → String
   | .boolean => "a boolean"
   | .number => "a number"
 
+/-- The human-readable text of a kind. `.negative` reads "is written with a minus sign": the rule is about the lexeme's sign, and a `-0` is refused without being below zero. -/
 def Kind.render : Kind → String
   | .missing => "is missing"
   | .wrongType t => s!"is not {t.render}"
   | .empty => "is empty"
   | .unsupported g => s!"has an unsupported value {g.quote}"
-  | .negative => "is negative"
+  | .negative => "is written with a minus sign"
 
 def Step.render : Step → String
   | .key k => "." ++ k

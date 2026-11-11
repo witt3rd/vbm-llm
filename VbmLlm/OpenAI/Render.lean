@@ -21,7 +21,8 @@ def optN (o : Option Nat) : String :=
 /-- The digits of a lexeme's digit list, as written. -/
 def digitsStr (ds : List LeanJson.Digit) : String := String.ofList (ds.map fun d => Char.ofNat (48 + d.val))
 
-/-- The reported amount, printed as the provider wrote it: sign, integer part, fraction and exponent. -/
+/-- The reported amount, printed from the parsed lexeme: sign, integer part, fraction and exponent. The lexeme does not keep an explicit `+` on an exponent (`1e+5` is the lexeme `e 5` and prints
+`e5`), and a `-0` prints `-0`: this rendering shows the lexeme, never the value. -/
 def optC (o : Option Amount) : String :=
   match o with
   | none => "none"
@@ -40,12 +41,14 @@ def Choice.render (c : Choice) : String :=
     [s!"choice index={optN c.index} finish={optS c.finishReason} class={cls}", s!"  content {optS c.message.content}", s!"  refusal {optS c.message.refusal}", s!"  reasoning {optS c.message.reasoning}"] ++
     c.message.toolCalls.map ToolCall.render)
 
+/-- One line of counts, then the tokens: the `cost` is printed **only when the provider reported one**, so a usage report that carries no cost renders exactly as it did before the cost was read. -/
 def Usage.render (u : Usage) : String :=
+  let cost := match u.cost with | none => "" | some _ => s!" cost={optC u.cost}"
   let t := match u.tokens with
     | .ok t => s!"tokens uncached={t.inputUncached} read={t.inputCacheRead} write={t.inputCacheWrite} output={t.output} reasoning={t.reasoning}"
     | .error (.cachedExceedsPrompt p c) => s!"tokens refused cachedExceedsPrompt prompt={p} cached={c}"
     | .error (.reasoningExceedsCompletion o r) => s!"tokens refused reasoningExceedsCompletion completion={o} reasoning={r}"
-  s!"usage prompt={optN u.promptTokens} completion={optN u.completionTokens} total={optN u.totalTokens} cached={optN u.cachedTokens} reasoning={optN u.reasoningTokens} cost={optC u.cost}\n{t}"
+  s!"usage prompt={optN u.promptTokens} completion={optN u.completionTokens} total={optN u.totalTokens} cached={optN u.cachedTokens} reasoning={optN u.reasoningTokens}{cost}\n{t}"
 
 def Response.render (r : Response) : String :=
   String.intercalate "\n" (

@@ -4,7 +4,8 @@ import VbmLlm.OpenAI.Response
 The wire contract of `CreateChatCompletionStreamResponse` (schema pinned in `docs/schemas/openai-chat.md`), read from a parsed `LeanJson.Value`, with the reading rules of `Response.lean`: `null` and absent are the same,
 a present field has its type or is refused, unread fields are ignored. Differences a stream has:
 * `choices` may be absent or empty (the usage frame of `stream_options.include_usage` has none); its `usage` is the reply's `Usage` (`Response.lean`), so the reported `cost` arrives in the stream exactly as
-  the token counts do and the fold carries it into the reply (`Stream.lean`);
+  the token counts do and the fold carries it into the reply: `decodeChunk_costFrame` and `foldEvents_cost_frames` (`VbmLlmProofs/OpenAI/Stream.lean`) state that of a frame's own bytes, and that a `cost`
+  written with a minus sign, or one that is not a number, makes the chunk a fault (`decodeChunk_negCostFrame`, `decodeChunk_strCostFrame`);
 * a choice carries a `delta`, absent reads as an empty delta;
 * a tool-call fragment's `index` is **required** by the schema: it is read as `Option` here and the fold decides what a missing one means (`Policy.missingIndexIsZero`);
 * the reasoning text of a delta (`reasoning`, else `reasoning_content`) and the `provider` of a chunk are read as the reply reads them (`Response.lean`);

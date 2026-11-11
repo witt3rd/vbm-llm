@@ -3,6 +3,7 @@ import VbmLlmProofs.Finish
 import VbmLlmProofs.Usage
 import VbmLlmProofs.OpenAI.Response
 import VbmLlmProofs.OpenAI.Stream
+import VbmLlmProofs.OpenAI.Render
 import VbmLlmProofs.OpenAI.Request
 import VbmLlmProofs.Turn
 import VbmLlmProofs.Context
@@ -71,9 +72,17 @@ def ledger : List Obligation := [
     (.proved [``VbmLlm.OpenAI.openai_cached_exceeds_refused, ``VbmLlm.OpenAI.openai_reasoning_exceeds_refused]),
   O "openai-usage-reports-the-providers-cost-as-it-wrote-it" ["openrouter-chat:usage-cost", "openrouter-chat:usage-cost-details"]
     (.proved [``VbmLlm.OpenAI.decodeUsage_ok_iff, ``VbmLlm.OpenAI.optCostOf_ok_iff, ``VbmLlm.OpenAI.amountMember_ok_iff, ``VbmLlm.OpenAI.decodeUsage_cost_some,
-      ``VbmLlm.OpenAI.decodeUsage_cost_none, ``VbmLlm.OpenAI.foldItems_cost, ``VbmLlm.OpenAI.foldItems_no_cost, ``VbmLlm.OpenAI.cost_some, ``VbmLlm.OpenAI.cost_none]),
+      ``VbmLlm.OpenAI.decodeUsage_cost_none, ``VbmLlm.OpenAI.foldItems_cost, ``VbmLlm.OpenAI.foldItems_no_cost, ``VbmLlm.OpenAI.cost_some, ``VbmLlm.OpenAI.cost_none,
+      ``VbmLlm.OpenAI.cost_some_witness, ``VbmLlm.OpenAI.cost_none_witness, ``VbmLlm.OpenAI.decode_reply_cost, ``VbmLlm.OpenAI.decode_reply_cost_accessor,
+      ``VbmLlm.OpenAI.decode_reply_noCost, ``VbmLlm.OpenAI.decode_reply_noCost_accessor, ``VbmLlm.OpenAI.render_no_cost_example, ``VbmLlm.OpenAI.render_cost_example,
+      ``VbmLlm.OpenAI.foldItems_cost_then_no_cost, ``VbmLlm.OpenAI.foldItems_cost_with_choice,
+      ``VbmLlm.OpenAI.costLexeme_bytes, ``VbmLlm.OpenAI.negZeroLexeme_bytes, ``VbmLlm.OpenAI.decodeChunk_costFrame, ``VbmLlm.OpenAI.decodeChunk_costFrame_usage,
+      ``VbmLlm.OpenAI.foldEvents_cost_frames]),
   O "openai-usage-a-negative-or-non-numeric-cost-is-refused" ["openrouter-chat:usage-cost"]
-    (.proved [``VbmLlm.OpenAI.optCost_negative, ``VbmLlm.OpenAI.optCost_string, ``VbmLlm.OpenAI.decodeUsage_negative_cost, ``VbmLlm.OpenAI.decodeUsage_string_cost]),
+    (.proved [``VbmLlm.OpenAI.optCost_negative, ``VbmLlm.OpenAI.optCost_string, ``VbmLlm.OpenAI.decodeUsage_negative_cost, ``VbmLlm.OpenAI.decodeUsage_string_cost,
+      ``VbmLlm.OpenAI.optCost_negZero, ``VbmLlm.OpenAI.optCost_negZeroDot, ``VbmLlm.OpenAI.optCost_negZeroExp, ``VbmLlm.OpenAI.writesZero_negZero, ``VbmLlm.OpenAI.writesZero_negZeroDot, ``VbmLlm.OpenAI.writesZero_negZeroExp, ``VbmLlm.OpenAI.negZeroDot_bytes, ``VbmLlm.OpenAI.negZeroExp_bytes, ``VbmLlm.OpenAI.decodeUsage_negZero_cost, ``VbmLlm.OpenAI.amountMember_neg, ``VbmLlm.OpenAI.decodeChunk_negCostFrame,
+      ``VbmLlm.OpenAI.decodeChunk_negCostFrame_refused, ``VbmLlm.OpenAI.decodeChunk_strCostFrame, ``VbmLlm.OpenAI.decodeChunk_strCostFrame_refused,
+      ``VbmLlm.OpenAI.foldEvents_negCostFrame, ``VbmLlm.OpenAI.foldEvents_strCostFrame]),
   O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
   O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- the error taxonomy and the body of a failed call

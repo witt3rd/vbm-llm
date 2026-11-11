@@ -15,7 +15,8 @@ Reading rules (the policy, stated once; each is a theorem in `VbmLlmProofs/OpenA
 * a finish reason is kept as the provider's text; `FinishClass.ofWire` (`Finish.lean`) classes it;
 * usage counts are plain naturals when present (a sign, a fraction, an exponent or a string is refused); absent counts stay absent, they are not 0;
 * the **reported cost** of a call is `usage.cost`: the number the provider wrote, read as itself (`Option Amount`, the pinned lexeme) and nothing more (no unit, no conversion, never combined with the counts). Absent or
-  `null` is `none` (a provider that reports no cost); a `cost` that is present but not a number, or negative, is refused (an amount cannot be negative); `usage.cost_details`, the nested breakdown, is not
+  `null` is `none` (a provider that reports no cost); a `cost` that is present but not a number is refused as not a number, and a number **written with a minus sign** is refused as negative (an amount is
+  the lexeme the provider wrote, so the test is its sign flag: `-0` carries it and is refused too, though it is zero, never a number below zero); `usage.cost_details`, the nested breakdown, is not
   read. The streamed usage frame carries the same `Usage`, so the cost reaches the fold's reply as the counts do (`Chunk.lean`, `Stream.lean`);
 * the model's **reasoning text** is the message's `reasoning` member (OpenRouter's) or its `reasoning_content` member (the other compatible servers'): the first of the two that is present, each of them a string when
   present; the served **provider** is the reply's `provider` member (OpenRouter names the upstream that served the call): an opaque string, read when present, never looked at;
@@ -92,7 +93,8 @@ def optNat (o : Value) (k : String) : Except Fault (Option Nat) :=
     | none => .error { path := [.key k], kind := .wrongType .natural }
   | _ => .error { path := [.key k], kind := .wrongType .natural }
 
-/-- The amount a number lexeme reports: itself when no minus sign writes it negative; a fault (`negative`) otherwise. -/
+/-- The amount a number lexeme reports: itself when it is written without a minus sign; a fault (`negative`) otherwise. The test is the lexeme's sign flag, **not the value**: `-0` is zero and is refused
+anyway, because "written with a minus sign" is what this reader decides on (a lexeme is never turned into a float here, so the sign is all it has). -/
 def amountMember (n : Amount) : Except Fault (Option Amount) :=
   if n.neg then .error (Fault.here .negative) else .ok (some n)
 
@@ -103,8 +105,9 @@ def optCostOf (o : Value) : Except Fault (Option Amount) :=
   | .num n => amountMember n
   | _ => .error (Fault.here (.wrongType .number))
 
-/-- An optional amount member (`cost`): the number the provider wrote, as itself, when it is written without a minus sign (a fraction and an exponent are such a number as `1.68e-05` shows); absent or
-`null` is no report; a number written with a minus sign is refused as a negative amount, and so is a value that is not a number. -/
+/-- An optional amount member (`cost`): the number the provider wrote, as itself, when it is written without a minus sign (a fraction and an exponent are such a number, as `1.68e-05` shows); absent or
+`null` is no report; a number **written with a minus sign** is refused as a negative amount (a `-0` too: it is zero, and it is refused for its sign, not for its value), and so is a value that is not a
+number. -/
 def optCost (o : Value) : Except Fault (Option Amount) := underStep (.key "cost") (optCostOf o)
 
 /-- A required string member. -/
