@@ -1,5 +1,5 @@
-# The concurrent gates of tier1.sh whose own output carries their count: `NAME REGEX` (one capture group = the number of cases the gate executed; scripts/ran-evidence.sh check-dir).
-# A gate not named here must print `ran: NAME: N cases` itself (the tests job does). scripts/test_ran_evidence.sh checks that every `bg NAME` of tier1.sh is covered.
+# The concurrent gates of tier1.sh whose own output carries their count: `NAME REGEX` (one capture group = the number of cases the gate executed; .land/tool/bin/ran-evidence check-dir).
+# A gate not named here must print `ran: NAME: N cases` itself (the tests job does). scripts/tier1.sh checks that every `bg NAME` of it is covered.
 axiom-gate axiom gate: ([0-9]+) constants checked
 ledger-gate ^ledger: [0-9]+ proved,.* of ([0-9]+)$
 vectors-check ^vbm-llm-vectors: ([0-9]+) replies.* 0 differ$

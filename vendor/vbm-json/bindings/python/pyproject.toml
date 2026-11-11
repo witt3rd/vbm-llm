@@ -1,0 +1,14 @@
+# Manifest only: nothing is published (names reserved by docs/decisions/0001-vbm-json.md). The library (libvbm_json) is built by scripts/build_shared.sh and found by vbm_json/loader.py.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vbm-json"
+version = "0.0.0"
+description = "Verified JSON codec (RFC 8259): Python binding generated from the vbm-json ABI description"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+
+[tool.setuptools]
+packages = ["vbm_json"]

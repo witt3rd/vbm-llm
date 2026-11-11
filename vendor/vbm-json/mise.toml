@@ -1,0 +1,4 @@
+# Project toolchain pin (no elan: the pinned release tarball is the toolchain). The whole tree builds with this one Lean (docs/decisions/0001-vbm-json.md).
+# `wt` (Worktrunk, optional: only scripts/wt uses it) is not pinned here; install it yourself if you want it.
+[tools]
+"github:leanprover/lean4" = "4.35.0"

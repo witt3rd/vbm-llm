@@ -1,0 +1,5 @@
+# Refinement bridges for the ledger's reach rule (scripts/LedgerGate.lean): `spec-def theorem reached-def`.
+# The exports do not name the spec-def (the reference recogniser) but run the reached-def (the fast parser), and the theorem (which must mention both)
+# proves they are the same function. The gate refuses a bridge whose theorem is missing, does not mention both, or whose reached-def is not reached from
+# an entry point. The reference `parse` is run, through `parseFast_eq_parse`, by the fast parser `parseFast`.
+LeanJson.parse LeanJson.parseFast_eq_parse LeanJson.parseFast

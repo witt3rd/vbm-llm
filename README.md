@@ -47,7 +47,7 @@ The VBM scorecard reads this repository from `scorecard.toml` and prints one car
 
 ## Build and test
 
-Prerequisites: `git`, [mise](https://mise.jdx.dev), `python3`, `jq`, a C compiler (`cc`), `coredumpctl` (systemd-coredump: the crash-record gate refuses to skip) and network access for the first fetch (the pinned Lean toolchain and the pinned `vbm-json`); a clean `ubuntu:24.04` with those passes the gate with the network cut after the fetch. Everything runs as `mise exec -- ...` (Lean 4.35.0, pinned in `mise.toml`). `mise exec -- scripts/tier1.sh` is the gate before landing: forbidden constructs, import rule, zero-warning build, the axiom gate, the obligation ledger with its spec-clause tags, the pinned-library check, the conformance vectors (`vectors/`: the published schema's own examples plus refusals), and the self-tests of the process scripts. Every gate has a negative self-test.
+Prerequisites: `git`, [mise](https://mise.jdx.dev), `python3`, `jq`, a C compiler (`cc`), `coredumpctl` (systemd-coredump: the crash-record gate refuses to skip) and network access for the first fetch (the pinned Lean toolchain; `vbm-json` is vendored in `vendor/`, so nothing else is fetched); a clean `ubuntu:24.04` with those passes the gate with the network cut after the fetch. Everything runs as `mise exec -- ...` (Lean 4.35.0, pinned in `mise.toml`). `mise exec -- scripts/tier1.sh` is the gate before landing: forbidden constructs, import rule, zero-warning build, the axiom gate, the obligation ledger with its spec-clause tags, the pinned-library check, the conformance vectors (`vectors/`: the published schema's own examples plus refusals), and the self-tests of the process scripts. Every gate has a negative self-test.
 
 ## How it is built
 

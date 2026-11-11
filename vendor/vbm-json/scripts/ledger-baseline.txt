@@ -1,0 +1,3 @@
+proved 7
+open 1
+total 22

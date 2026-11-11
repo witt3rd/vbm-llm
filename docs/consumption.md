@@ -1,7 +1,7 @@
 # What a consumer can delete: the consumption note
 
 For a verified agent harness that talks to LLM providers today with hand-written decoders. Each slice of this library lets such a harness delete a named piece of its own provider code and call a proved one. The harness keeps what is policy (what to do with a reply) and the transport; it deletes what is wire contract.
-Pin the library the way the harness pins any outside library (a lock line with the revision and the hash of the spec files, `scripts/pinned-lib.py hash` writes it), after `vbm-json` is pinned to the same revision.
+Pin the library the way the harness pins any outside library (`land-pin vendor`, which vendors the signed release at `vendor/NAME` and locks its tag, commit and tree hash in `.land/pins.lock`), after `vbm-json` is pinned to the same revision.
 
 | slice | status | the harness function it replaces | what changes in the harness |
 |---|---|---|---|

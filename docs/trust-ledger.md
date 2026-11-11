@@ -8,7 +8,7 @@ One file listing **everything outside our direct control that vbm-llm executes o
 
 ## How the gate keeps this file true
 
-The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`.land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `scripts/pinned-libs.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
+The set of things that must appear here is **derived from the tree, not from this file**: every `@[extern]` symbol in `VbmLlm/`, every C file, the build pins (`lean-toolchain`, `mise.toml`, `lakefile.lean`, `lake-manifest.json`), the pinned landing tool (`.land/PIN`), the Lean pin's compiler, runtime and bundled clang/ld.lld (the keys `lean-compiler`, `lean-runtime`, `clang-lld`), every pinned library (`pin:NAME`, one per line of `.land/pins.lock`), and a watch-list of tools the scripts run. Each is a key (`file:`, `extern:`, `pin:`, `tool:`, plus the three Lean keys) that an entry must name on its **Covers** line.
 - A new boundary (extern, C file, workflow, pinned library, tool) with no entry **fails**.
 - A `Covers` key that names nothing real fails (a stale or invented cover), and **removing any entry fails** (the gate does this to itself on every run, one entry at a time). Dangling file references fail. An entry needs all seven fields, a **Plan** from `verify | replace | sandbox | accept`, and `accept` needs `because ...`. **Assumes** must link a written contract or say `no written contract` (counted as a gap); **Test** must name a test that can fail or say `none` (counted as a gap).
 - Not covered by the gate (said, not hidden): a tool called from a script that is not on the watch-list in `scripts/trust-ledger-check.sh`, and the *quality* of an entry's prose.
@@ -68,7 +68,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 
 ### T07. git, gh, flock, python3: the process tooling
 - **What:** `git` and `gh` (the red-check, rebase and push steps of the pinned lander), `flock` (the lander's mutex), `python3` (the trust-ledger checker, the pin checker, the diff judge, the public-readiness lint). They run on the developer's machine; none is part of any artifact.
-- **Enters:** `.land/land-direct`, `.land/tool/`, `scripts/trust_ledger.py`, `scripts/pinned-lib.py`, `scripts/gate-diff-improving.sh`, the Tier 1 scripts.
+- **Enters:** `.land/land-direct`, `.land/tool/`, `scripts/trust_ledger.py`, `scripts/gate-diff-improving.sh`, the Tier 1 scripts.
 - **Assumes:** they do what their manuals say; the self-tests of the scripts that use them (scratch repositories) are the check that our use of them is right; no written contract.
 - **Test:** scripts/test_protected_set.sh, scripts/test_gate_diff_improving.sh, scripts/test_pinned_lib.sh (each runs the real script against a scratch repository).
 - **Owner:** upstream tools; the owner approves the scripts (protected set).
@@ -79,7 +79,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 
 ### T09. vbm-json: the verified JSON codec every reply is read through
 - **What:** the library `vbm-json` (https://github.com/witt3rd/vbm-json), a lake dependency at the pinned revision. Its `LeanJson.parseFast` turns the bytes of a reply into a `LeanJson.Value`; its own proofs (the fast parser equals the RFC 8259 reference, the reference is sound and complete) are the basis of every claim here that starts from a parsed value. Its code runs in every decode.
-- **Enters:** `lakefile.lean` (the `require`), `lake-manifest.json`, `scripts/pinned-libs.lock`; `VbmLlm/Wire.lean` imports `LeanJson.Value`, the vector checker calls `LeanJson.parseFast`.
+- **Enters:** `lakefile.lean` (the `require`), `lake-manifest.json`, `.land/pins.lock`, `vendor/vbm-json/`; `VbmLlm/Wire.lean` imports `LeanJson.Value`, the vector checker calls `LeanJson.parseFast`.
 - **Assumes:** the library's own ledger and its own independent re-check (`leanchecker`, nanoda at the pinned revision); this repository does **not** re-prove them: the gate checks that the bytes are the bytes at the pinned revision (rev, checkout HEAD and the hash of the specification files), never that they were proved. See docs/decisions/0001-vbm-llm.md, section 3.
 - **Test:** scripts/test_pinned_lib.sh (a stale revision, an edited spec file, a fork, an unlocked package and a malformed lock each fail) and the relabel attacks scripts/attacks/13a-pin-stale-rev.sh, 13b, 13d, 13g, 13h, 13i, 13j.
 - **Owner:** the owner (the lock, its tool and its test are protected paths); upstream vbm-json is the same owner's.
@@ -97,7 +97,7 @@ Entry format: **What** it is; **Enters** where it enters; **Assumes** what we as
 
 ### T11. vbm-simd: the bit-parallel kernels `vbm-json` is built on
 - **What:** the library `vbm-simd` (https://github.com/witt3rd/vbm-simd), a dependency of `vbm-json` that lake pulls in transitively at the revision `vbm-json` pins; its compiled objects are archived with `vbm-json`'s and run inside every parse. Nothing in `VbmLlm` imports it.
-- **Enters:** `lake-manifest.json` (an inherited package), `scripts/pinned-libs.lock`.
+- **Enters:** `lake-manifest.json` (an inherited package), `.land/pins.lock`, `vendor/vbm-json/vendor/vbm-simd/` (inside the vendored vbm-json).
 - **Assumes:** the same as T09: the gate checks that the bytes are the bytes at the pinned revision (rev, checkout HEAD, hash of the specification files), never that they were proved; the library's own ledger and trust ledger carry its proofs and its trusted shim header.
 - **Test:** scripts/test_pinned_lib.sh (as T09: a stale revision, an edited spec file, a fork, an unlocked package each fail).
 - **Owner:** the owner (the lock is a protected path); upstream vbm-simd is the same owner's.

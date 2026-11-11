@@ -1,0 +1,10 @@
+# Worktrunk project config: the worktree discipline (AGENTS.md).
+
+# A new worktree starts warm: copy the gitignored build cache (.lake, see .worktreeinclude), copy-on-write
+# where the filesystem allows, so the first `lake build` is incremental instead of a cold build.
+[post-start]
+cache = "wt step copy-ignored"
+
+# Nothing reaches main without Tier 1: it runs after the rebase, before the merge (a failure aborts the merge).
+[pre-merge]
+tier1 = "mise exec -- scripts/tier1.sh"

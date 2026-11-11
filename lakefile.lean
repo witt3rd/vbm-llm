@@ -4,9 +4,8 @@ open System Lake DSL
 package «vbm-llm» where
   leanOptions := #[⟨`warningAsError, true⟩, ⟨`autoImplicit, false⟩]
 
-/-- The one dependency: the verified JSON codec, pinned to the revision the first consumer pins (every library of the family pins `vbm-json` to the same revision:
-`scripts/pinned-libs.lock` holds its hash, `scripts/pinned-lib.py verify` is the gate). -/
-require «vbm-json» from git "https://github.com/witt3rd/vbm-json.git" @ "c0d7830e775a5af5a41886981973faf7b19032e2"
+/-- The one dependency: the verified JSON codec, vendored at vendor/vbm-json (its own dependency vbm-simd is inside it) and locked in .land/pins.lock; `land-pin verify` is the gate. -/
+require «vbm-json» from "vendor/vbm-json"
 
 /-- The library: specification and code, one Lean core. Imports `Init`, `LeanJson` (the pin) and itself only (checked by Tier 1). -/
 @[default_target]

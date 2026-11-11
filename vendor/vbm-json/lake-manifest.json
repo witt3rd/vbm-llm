@@ -1,0 +1,14 @@
+{"version": "1.3.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"type": "path",
+   "scope": "",
+   "name": "«vbm-simd»",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "vendor/vbm-simd",
+   "copy": false,
+   "configFile": "lakefile.lean"}],
+ "name": "«vbm-json»",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

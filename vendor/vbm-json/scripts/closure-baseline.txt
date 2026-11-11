@@ -1,0 +1,3 @@
+# unverified definitions reachable from the entry points, per module (scripts/ClosureGate.lean); may only fall
+mass 0
+specified_share 39046 39046

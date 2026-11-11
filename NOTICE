@@ -6,7 +6,7 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 Third-party material used by this repository:
 
 * vbm-json (https://github.com/witt3rd/vbm-json), Apache License 2.0, the verified JSON codec this library reads its input through. It is not copied into this repository:
-  lake fetches it at the revision pinned in lakefile.lean and scripts/pinned-libs.lock.
+  it is vendored at vendor/vbm-json, at the release locked in .land/pins.lock.
 
 * vbm-land (https://github.com/witt3rd/vbm-land), Apache License 2.0, the landing tool, vendored unchanged at a pinned release in .land/tool/ (.land/PIN).
 

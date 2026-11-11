@@ -30,7 +30,7 @@ allow_marker = "tier1-allow"
 closure_cmd = ""
 closure_regex = ""
 closure_timeout_seconds = 900
-axiom_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && { [ -z "${VBM_LLM_DEPS:-}" ] || { mkdir -p .lake/packages && cp -a "$VBM_LLM_DEPS/vbm-json" .lake/packages/; }; } && lake build VbmLlm VbmLlmProofs >/dev/null 2>&1 && lake env lean --run scripts/AxiomGate.lean'
+axiom_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && lake build VbmLlm VbmLlmProofs >/dev/null 2>&1 && lake env lean --run scripts/AxiomGate.lean'
 axiom_regex = 'axiom gate: [0-9]+ constants checked, ([0-9]+) offending'
 axiom_timeout_seconds = 900
 
@@ -72,16 +72,16 @@ wasm_bytes_regex = ""
 timeout_seconds = 60
 
 [tier1]
-command = '''cp -a /subject /tmp/w && cd /tmp/w && { [ -z "${VBM_LLM_DEPS:-}" ] || { mkdir -p .lake/packages && cp -a "$VBM_LLM_DEPS/vbm-json" .lake/packages/; }; } && scripts/tier1.sh'''
+command = '''cp -a /subject /tmp/w && cd /tmp/w && scripts/tier1.sh'''
 timeout_seconds = 1800
 script = "scripts/tier1.sh"
 # The warm run: the same gate on the build cache the cold run left, after a typical change (a comment in one proof file; untimed). The gate has no delta mode yet, so it runs everything.
 warm_change_cmd = 'cd /tmp/w && printf "\n-- warm-run change: a comment\n" >> VbmLlmProofs/Turn.lean'
 warm_command = 'cd /tmp/w && scripts/tier1.sh'
 warm_timeout_seconds = 900
-# Offline hosts: a directory holding a checkout of the pinned dependency (vbm-json, at the revision in lake-manifest.json) is named by VBM_LLM_DEPS; absent, lake fetches it.
-attack_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && { [ -z "${VBM_LLM_DEPS:-}" ] || { mkdir -p .lake/packages && cp -a "$VBM_LLM_DEPS/vbm-json" .lake/packages/; }; } && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean'
-attack_sabotage_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && { [ -z "${VBM_LLM_DEPS:-}" ] || { mkdir -p .lake/packages && cp -a "$VBM_LLM_DEPS/vbm-json" .lake/packages/; }; } && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean --sabotage'
+# Offline hosts: nothing to provide: the dependency (vbm-json, with vbm-simd inside it) is vendored in vendor/ and locked in .land/pins.lock.
+attack_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean'
+attack_sabotage_cmd = 'cp -a /subject /tmp/w && cd /tmp/w && git config core.hooksPath /dev/null && scripts/relabel-attacks.sh --no-lean --sabotage'
 attack_timeout_seconds = 1800
 gates = [
   { name = "forbidden-constructs scan", selftest = "forbidden-constructs scan: negative self-tests ok" },
@@ -97,8 +97,6 @@ gates = [
   { name = "public-readiness lint", selftest = "^ok +scripts/test_lint_public\\.sh" },
   { name = "workflow lint", selftest = "^ok +scripts/test_lint_workflows\\.sh" },
   { name = "protected-set gate", selftest = "^ok +scripts/test_protected_set\\.sh" },
-  { name = "parallel test runner", selftest = "^ok +scripts/test_run_parallel\\.sh" },
-  { name = "crash-record check", selftest = "^ok +scripts/test_no_crash_record\\.sh" },
   { name = "gate-diff judge", selftest = "^ok +scripts/test_gate_diff_improving\\.sh" },
   { name = "relabel-attack suite", selftest = "^ok +scripts/test_relabel_attacks\\.sh" },
 ]

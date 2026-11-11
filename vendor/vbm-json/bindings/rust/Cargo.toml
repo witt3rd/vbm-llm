@@ -1,0 +1,18 @@
+# Manifest only: publish = false, nothing is published (the crate name vbm-json is reserved by docs/decisions/0001-vbm-json.md).
+# loader.rs is the hand-written build script: it tells the linker where libvbm_json is (VBM_JSON_LIB_DIR).
+[package]
+name = "vbm-json"
+version = "0.0.0"
+edition = "2021"
+description = "Verified JSON codec (RFC 8259): Rust binding generated from the vbm-json ABI description"
+license = "Apache-2.0"
+publish = false
+build = "loader.rs"
+
+[lib]
+name = "vbm_json"
+path = "src/lib.rs"
+
+[[test]]
+name = "vectors"
+path = "tests/vectors.rs"

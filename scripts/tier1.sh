@@ -4,17 +4,12 @@
 # Every gate has a negative self-test and runs it here. Run from the repo root: mise exec -- scripts/tier1.sh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# A sourced library that has been replaced by a stub (`exit 0`) would end this script, and every test of it, with success: each is checked to define its function before it is sourced (the relabel-attack suite attacks this).
-[ "$(grep -c '^nocrash_begin()' scripts/lib-no-crash-record.sh)" = 1 ] || { echo "tier1: scripts/lib-no-crash-record.sh does not define nocrash_begin" >&2; exit 1; }
-# RAN-EVIDENCE (docs/decisions/0002-ran-evidence.md): a gate or self-test that never ran must not pass. Every test script and every concurrent gate ends with `ran: NAME: N cases` (N > 0, or the gate's own count line named in
-# scripts/ran-gates.txt); scripts/run-tests-parallel.sh and the check below FAIL a job without it, and a refused tool, a SKIPPED check or a stop by a guard is a failure, never a pass (scripts/ran-evidence.sh, scripts/test_ran_evidence.sh).
-[ "$(grep -c '^ran_done()' scripts/lib-ran.sh)" = 1 ] || { echo "tier1: scripts/lib-ran.sh does not define ran_done" >&2; exit 1; }
-[ "$(grep -c '^must_fail()' scripts/lib-ran.sh)" = 1 ] || { echo "tier1: scripts/lib-ran.sh does not define must_fail" >&2; exit 1; }
-[ "$(grep -c '^  check-dir)' scripts/ran-evidence.sh)" = 1 ] || { echo "tier1: scripts/ran-evidence.sh does not define check-dir" >&2; exit 1; }
-# No test may leave a crash record (systemd-coredump, hence a desktop notification): the whole run is wrapped (scripts/lib-no-crash-record.sh; its self-test is test_no_crash_record.sh).
-. scripts/lib-no-crash-record.sh; nocrash_begin
+# RAN-EVIDENCE (.land/tool/docs/ran-evidence.md): a gate or self-test that never ran must not pass. Every test script and every concurrent gate ends with `ran: NAME: N cases` (N > 0, or the gate's own count line named in
+# scripts/ran-gates.txt); .land/tool/bin/run-tests-parallel and the check below FAIL a job without it, and a refused tool, a SKIPPED check or a stop by a guard is a failure, never a pass. The tools are the vendored ones: land-check refuses an edited copy.
+# No test may leave a crash record (systemd-coredump, hence a desktop notification): the whole run is wrapped (.land/tool/lib/no-crash-record.sh, tested in vbm-land).
+. .land/tool/lib/no-crash-record.sh; nocrash_begin
 
-# The independent test scripts are declared with `par` where they are described below and run in parallel at the end (scripts/run-tests-parallel.sh): Tier 1 wall time is the longest script, not the sum.
+# The independent test scripts are declared with `par` where they are described below and run in parallel at the end (.land/tool/bin/run-tests-parallel): Tier 1 wall time is the longest script, not the sum.
 # A test script must use its own temp dirs. Every scripts/test_*.sh must be declared.
 tests=(); par() { tests+=("$@"); }
 # The gates after the build are independent of each other and of the tests: they run concurrently (`bg NAME CMD...`, output kept and shown on failure; `bgwait` below).
@@ -50,16 +45,15 @@ echo "tier1: import scan: negative self-tests ok (each import outside Init, Lean
 
 # 1b. Pipefail-unsafe pipelines (an early-exiting consumer) are flaky by construction; the lint has a negative self-test.
 scripts/lint-pipefail.sh
-# Long runners (scripts/long-runners.txt) run under scripts/run-scoped.sh (a bounded transient scope, reaped on exit: an aborted run cannot orphan); the lint is negative-tested here (a guard against accidents: indirection is its stated limit).
-scripts/lint-scoped-runners.sh --selftest
+# Long runners (scripts/long-runners.txt; none declared today) run under the vendored .land/tool/bin/run-scoped.sh (a bounded transient scope, reaped on exit); the heavy-host guard's lint checks it (vbm-land docs/no-build-host.md).
+.land/tool/bin/no-build-guard --lint .
 
 
 # 1d. The vendored lander is the pinned copy (no local patch): the drift check, offline.
 .land/tool/bin/land-check
 
-# 1e. Pinned libraries: every package of the lake manifest is a line of the protected lock scripts/pinned-libs.lock, and every adopted one is exactly what the lock says (rev, checkout, spec hash).
-scripts/pinned-lib.py fetch
-scripts/pinned-lib.py verify
+# 1e. Pinned libraries: every vendored library is exactly its lock line (.land/pins.lock; vbm-land docs/pin.md), and there is one copy of each in the closure.
+.land/tool/bin/land-pin verify
 
 # 2. Build the libraries and the vector checker; warningAsError is set in lakefile.lean, so any warning fails. The mechanism is checked: the option is set, and a file with a warning fails under it.
 grep -q 'warningAsError, true' lakefile.lean || { echo "tier1: lakefile.lean does not set warningAsError" >&2; exit 1; }
@@ -71,8 +65,6 @@ lake env lean -DwarningAsError=true "$st" >/dev/null 2>&1 || { echo "tier1: a cl
 echo "tier1: zero-warning build: negative self-test ok (a file with a warning fails under warningAsError)"
 # The inline check above is the first version (it passes when lake is refused: the defect); scripts/check-zero-warning.sh is the check: the warning's own diagnostic is required, a clean file must pass, it prints `ran: zero-warning: 3 cases`.
 scripts/check-zero-warning.sh
-# vbm-json (from c0d7830) compiles with `-include <its own dir>/.lake/packages/vbm-simd/include/vbm_simd.h`, but as a dependency lake puts its own dependency vbm-simd beside it: link that path to the one lake made (an upstream defect of vbm-json's lakefile).
-lake resolve-deps; mkdir -p .lake/packages/vbm-json/.lake/packages; ln -sfn ../../../vbm-simd .lake/packages/vbm-json/.lake/packages/vbm-simd
 lake build VbmSimd:static LeanJson:static   # built alone first: a module of vbm-simd reached by two paths is then never built twice at once
 lake build VbmLlm VbmLlmProofs vbm-llm-vectors   # once, for the gates and every test (they build nothing more)
 
@@ -91,23 +83,19 @@ bg vectors-check lake exe vbm-llm-vectors --check --selftest
 par scripts/test_lint_public.sh
 
 # 3. The process scripts, offline, in scratch repos.
-# 3b. The parallel runner: a failing, missing or silently skipped script fails the run.
-# 3c'. The ran-evidence mechanism (scripts/lib-ran.sh, scripts/ran-evidence.sh): the shared negative test: a refused, missing, skipped, silent or zero-count check FAILS.
-par scripts/test_ran_evidence.sh
-par scripts/test_run_parallel.sh
-# 3c. The crash-record check and the quiet probe runner (scripts/lib-no-crash-record.sh): a coredumpctl entry fails the run (shim), a quiet crash leaves none.
-par scripts/test_no_crash_record.sh
-
-# 3f. scripts/run-scoped.sh (status, bound, an aborted run leaves no orphan) and scripts/lib-reap.sh (an aborted script leaves none of its background jobs).
-par scripts/test_run_scoped.sh
-par scripts/test_reap.sh
+# 3b. The test-running runtime (ran-evidence, the parallel runner, the crash-record check, run-scoped, the reaper) is the vendored tool's and is tested in vbm-land.
+# Every concurrent gate must say how its count is read: a `bg NAME` of this script has a line in scripts/ran-gates.txt, or prints its own `ran: NAME: N cases` (the tests job does).
+for g in $(sed -nE 's/^bg ([A-Za-z0-9_-]+) .*/\1/p' scripts/tier1.sh); do
+  [ "$g" = tests ] && continue
+  grep -qE "^$g " scripts/ran-gates.txt || { echo "tier1: the concurrent gate $g has no line in scripts/ran-gates.txt: its count is not required" >&2; exit 1; }
+done
 
 # 4. The declared test scripts, in parallel; a failing, missing or silently skipped one fails Tier 1. Every scripts/test_*.sh must be declared.
 for f in scripts/test_*.sh; do case " ${tests[*]} " in *" $f "*) ;; *) echo "tier1: $f is not declared with par" >&2; exit 1;; esac; done
 echo "tier1: ${#tests[@]} test scripts: ${tests[*]}"
-bg tests scripts/run-tests-parallel.sh "${tests[@]}"
+bg tests .land/tool/bin/run-tests-parallel "${tests[@]}"
 bgwait
-scripts/ran-evidence.sh check-dir "$bgdir" scripts/ran-gates.txt   # every concurrent gate and the tests job ran something: its own count (scripts/ran-gates.txt) or a ran line
+.land/tool/bin/ran-evidence check-dir "$bgdir" scripts/ran-gates.txt   # every concurrent gate and the tests job ran something: its own count (scripts/ran-gates.txt) or a ran line
 nocrash_end
 
 echo "tier1: ok"

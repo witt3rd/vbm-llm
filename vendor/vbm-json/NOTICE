@@ -1,0 +1,19 @@
+vbm-json
+Copyright 2026 Donald Thompson and the vbm-json contributors.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material included in this repository:
+
+* JSONTestSuite (vectors/jsontestsuite/), Copyright (c) 2016 Nicolas Seriot,
+  MIT License, vendored unchanged. https://github.com/nst/JSONTestSuite
+  The licence text is vectors/jsontestsuite/LICENSE.
+
+* Lean 4 (https://github.com/leanprover/lean4), Apache License 2.0,
+  Copyright (c) Microsoft Corporation, Lean FRO LLC and the Lean contributors.
+  The Lean toolchain is not part of this repository: it is downloaded at build time (mise.toml).
+  Code that Lean generates from this repository's sources links against Lean's runtime header
+  (lean/lean.h); abi/lean_mini.h and runtime/include/lean/config.h repeat the names, tags and
+  layouts of that header that the freestanding builds need (declarations only, checked against
+  the real header by tests/lean_layout.c), and runtime/rt.c reimplements, for the objects this
+  library creates, the few runtime functions the generated C calls.

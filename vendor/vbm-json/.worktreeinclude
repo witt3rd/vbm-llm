@@ -1,0 +1,2 @@
+# gitignored files a new worktree inherits (wt step copy-ignored): the Lean build cache only
+.lake/

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Tier 1: the public-readiness lint (scripts/lint-public) passes on the whole tree AND is shown able to fail: a planted private-name hash (a harmless canary token stands in, so this file spells no private
-# name), a path of ours, a retired project name, a banned token in a FILE NAME, and in an untracked file are each flagged; a clean tree passes; the hash list cannot be emptied.
+# name; and a canary inside vendor/ is NOT flagged, one beside it is), a path of ours, a retired project name, a banned token in a FILE NAME, and in an untracked file are each flagged; a clean tree passes; the hash list cannot be emptied.
 export LC_ALL=C
 set -euo pipefail
 cd "$(dirname "$0")/.."
-. scripts/lib-ran.sh   # ran_case counts each executed check, ran_done prints the evidence line `ran: NAME: N cases` (docs/decisions/0002-ran-evidence.md)
+. .land/tool/lib/ran.sh   # ran_case counts each executed check, ran_done prints the evidence line `ran: NAME: N cases` (.land/tool/docs/ran-evidence.md)
 lint=$(pwd)/scripts/lint-public
 fail() { echo "tier1: lint-public: $*" >&2; exit 1; }
 out=$("$lint") && ran_case || fail "the tree is not public-ready: $out"
@@ -17,6 +17,11 @@ chk() { "$lint" --root "$T/r" > "$T/out" 2>&1 && fail "negative self-test: $1 wa
 echo "a ZzCanary here" > "$T/r/a.md"; chk "a banned token (any case)" "a.md:1: a private name"
 echo "clean" > "$T/r/a.md"; echo "x" > "$T/r/zzcanary-notes.md"; chk "a banned token in a file name" "zzcanary-notes.md:path"; rm "$T/r/zzcanary-notes.md"
 echo "x" > "$T/r/untracked.md"; echo "zzcanary" >> "$T/r/untracked.md"; chk "a banned token in an untracked file" "untracked.md:2"; rm "$T/r/untracked.md"
+rm -f "$T/r/scripts/test_lint_public.sh"   # the fixture's copy of this file spells the canary itself
+mkdir -p "$T/r/vendor/lib"; echo "a zzcanary here" > "$T/r/vendor/lib/NOTICE"; echo clean > "$T/r/a.md"
+"$lint" --root "$T/r" >/dev/null && ran_case || fail "a banned token inside vendor/ (another repository's locked, published content) was flagged"
+echo "zzcanary" > "$T/r/vendor.md"; chk "a banned token in a file merely NAMED like vendor (outside the directory)" "vendor.md:1"; rm "$T/r/vendor.md"
+echo "zzcanary" > "$T/r/vendors.md"; chk "a banned token in a file of a similarly named path" "vendors.md:1"; rm "$T/r/vendors.md" "$T/r/vendor/lib/NOTICE"
 unset LINT_PUBLIC_EXTRA_HASHES
 printf 'see %s/dt/src\n' /home > "$T/r/a.md"; chk "a home path" "a.md:1: a path of ours"
 printf 'see ~%s\n' /cloud > "$T/r/a.md"; chk "a tilde path" "a.md:1: a path of ours"

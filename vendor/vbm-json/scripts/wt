@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# `wt` (worktrunk) with this repository's layout: worktrees live next to the clone, in <clone>/../<repo>.wt/<branch>, never as a branch checked out in the
+# primary clone. Every worktree is made through this wrapper (plain `git worktree add` works too).
+# merge.commit=false: `wt merge` never auto-commits stray files; commit deliberately.
+# Usage: scripts/wt switch -c agent/<task>   |   scripts/wt list   |   scripts/wt merge   |   scripts/wt remove
+set -euo pipefail
+# runs in the caller's directory: from inside a worktree it operates on that worktree
+command -v wt >/dev/null || { echo "scripts/wt: wt (Worktrunk, https://worktrunk.dev) is not installed; install it, or use git worktree add and git config core.hooksPath scripts/githooks" >&2; exit 127; }
+exec wt --config-set 'worktree-path="{{ repo_path }}/../{{ repo }}.wt/{{ branch | sanitize }}"' --config-set 'merge.squash=false' --config-set 'merge.commit=false' "$@"

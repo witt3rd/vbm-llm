@@ -1,0 +1,76 @@
+{
+  "abi": "vbm-json",
+  "abi_version": 1,
+  "prefix": "vbm_json_",
+  "note": "The machine-readable ABI of include/vbm_json.h. scripts/check_abi.py checks the two agree (Tier 1); scripts/gen-bindings.sh generates the bindings from this file. Types are abstract: u8 u64 int size, ptr (void *), ptr:u8 ptr:u64 (const pointers to those), ptr:NAME (pointer to struct NAME), struct:NAME (by value), fn:NAME (a callback, NAME in 'callbacks'). Each 'c' is the C text, compared to the header with whitespace removed.",
+  "tape": {
+    "word_bytes": 8,
+    "endian": "little",
+    "node_words": 2,
+    "head": "kind | len << 8",
+    "kind_bits": 8,
+    "len_shift": 8,
+    "doc": "head = kind | len << 8, then aux. null/false/true: len 0, aux 0. number/string: len bytes of text at offset aux (number = lexeme, string = unescaped UTF-8). array: len elements follow; object: len members follow, each a string node (key) then a node (value); aux = words of the whole subtree, the node's two included. Duplicate keys kept in input order."
+  },
+  "kinds": [
+    {"name": "NULL", "value": 0},
+    {"name": "FALSE", "value": 1},
+    {"name": "TRUE", "value": 2},
+    {"name": "NUMBER", "value": 3},
+    {"name": "STRING", "value": 4},
+    {"name": "ARRAY", "value": 5},
+    {"name": "OBJECT", "value": 6}
+  ],
+  "errors": [
+    {"name": "OK", "value": 0},
+    {"name": "SYNTAX", "value": 1},
+    {"name": "DEPTH", "value": 2},
+    {"name": "NOMEM", "value": 3},
+    {"name": "ARG", "value": 4},
+    {"name": "INTERNAL", "value": 5}
+  ],
+  "callbacks": {
+    "alloc": {"ret": "ptr", "params": [{"name": "ctx", "type": "ptr"}, {"name": "size", "type": "size"}]},
+    "free": {"ret": "void", "params": [{"name": "ctx", "type": "ptr"}, {"name": "ptr", "type": "ptr"}, {"name": "size", "type": "size"}]}
+  },
+  "structs": [
+    {"name": "vbm_json_allocator", "fields": [
+      {"name": "ctx", "type": "ptr", "c": "void *ctx"},
+      {"name": "alloc", "type": "fn:alloc", "c": "void *(*alloc)(void *ctx, size_t size)"},
+      {"name": "free", "type": "fn:free", "c": "void (*free)(void *ctx, void *ptr, size_t size)"}]},
+    {"name": "vbm_json_opts", "fields": [
+      {"name": "size", "type": "size", "c": "size_t size"},
+      {"name": "allocator", "type": "ptr:vbm_json_allocator", "c": "const vbm_json_allocator *allocator"}]},
+    {"name": "vbm_json_tape", "fields": [
+      {"name": "words", "type": "ptr:u64", "c": "const uint64_t *words"},
+      {"name": "nwords", "type": "size", "c": "size_t nwords"},
+      {"name": "text", "type": "ptr:u8", "c": "const uint8_t *text"},
+      {"name": "ntext", "type": "size", "c": "size_t ntext"},
+      {"name": "block_", "type": "ptr", "c": "void *block_"},
+      {"name": "block_size_", "type": "size", "c": "size_t block_size_"},
+      {"name": "allocator_", "type": "struct:vbm_json_allocator", "c": "vbm_json_allocator allocator_"}]},
+    {"name": "vbm_json_bytes", "fields": [
+      {"name": "data", "type": "ptr:u8", "c": "const uint8_t *data"},
+      {"name": "len", "type": "size", "c": "size_t len"},
+      {"name": "block_", "type": "ptr", "c": "void *block_"},
+      {"name": "block_size_", "type": "size", "c": "size_t block_size_"},
+      {"name": "allocator_", "type": "struct:vbm_json_allocator", "c": "vbm_json_allocator allocator_"}]}
+  ],
+  "functions": [
+    {"name": "vbm_json_parse", "c": "int vbm_json_parse(const uint8_t *buf, size_t len, const vbm_json_opts *opts, vbm_json_tape *tape)",
+     "ret": "int",
+     "params": [{"name": "buf", "type": "ptr:u8"}, {"name": "len", "type": "size"}, {"name": "opts", "type": "ptr:vbm_json_opts"}, {"name": "tape", "type": "ptr:vbm_json_tape"}]},
+    {"name": "vbm_json_free", "c": "void vbm_json_free(vbm_json_tape *tape)",
+     "ret": "void",
+     "params": [{"name": "tape", "type": "ptr:vbm_json_tape"}]},
+    {"name": "vbm_json_print_tape", "c": "int vbm_json_print_tape(const vbm_json_tape *tape, const vbm_json_opts *opts, vbm_json_bytes *out)",
+     "ret": "int",
+     "params": [{"name": "tape", "type": "ptr:vbm_json_tape"}, {"name": "opts", "type": "ptr:vbm_json_opts"}, {"name": "out", "type": "ptr:vbm_json_bytes"}]},
+    {"name": "vbm_json_escape_string", "c": "int vbm_json_escape_string(const uint8_t *buf, size_t len, const vbm_json_opts *opts, vbm_json_bytes *out)",
+     "ret": "int",
+     "params": [{"name": "buf", "type": "ptr:u8"}, {"name": "len", "type": "size"}, {"name": "opts", "type": "ptr:vbm_json_opts"}, {"name": "out", "type": "ptr:vbm_json_bytes"}]},
+    {"name": "vbm_json_bytes_free", "c": "void vbm_json_bytes_free(vbm_json_bytes *out)",
+     "ret": "void",
+     "params": [{"name": "out", "type": "ptr:vbm_json_bytes"}]}
+  ]
+}

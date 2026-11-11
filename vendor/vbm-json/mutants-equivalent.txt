@@ -1,0 +1,5 @@
+# Mutants of the scorecard's mutation metric (scripts/mutants.py, docs/mutants.md) that are EQUIVALENT: no test can tell them from the code. One per line, three TAB-separated fields:
+#   id = file:line:col:old:new (line 1-based, col 0-based, as the runner numbers them) TAB reason (at least 20 characters; an entry with no reason does not count) TAB expiry (YYYY-MM-DD)
+# scripts/mutants.py rejects an entry with no reason, an expired entry, an id that matches no mutant (the code moved), and an entry for a mutant the tests now kill. The score is killed / (killed + survivors that are not listed here).
+abi/vbm_json.c:94:39:-:+	`nw <= (n + 24) / 8` instead of `(n - 24) / 8`: PROVED equivalent in LeanJsonProofs/ShimHeader.lean, `plus_equiv` (the exact-sum conjunct `24 + 8 * nw + nt == n` fixes nw, so the looser bound accepts the same headers), for n below 2^62 (a Lean array's byte size).	2027-05-04
+abi/vbm_json.c:94:55:<=:<	`nt < n` instead of `nt <= n`: PROVED equivalent in LeanJsonProofs/ShimHeader.lean, `lt_equiv` (nt == n would need 24 + 8 * nw == 0, and the exact-sum conjunct is then false), for n below 2^62.	2027-05-04

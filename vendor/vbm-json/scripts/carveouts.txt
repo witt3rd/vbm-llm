@@ -1,0 +1,8 @@
+VbmSimd.ld64 | T14 | the 8-byte load (Lean model ld64Model proved in vbm-simd)
+VbmSimd.st64 | T14 | the 8-byte store
+VbmSimd.ctz | T14 | count trailing zeros (model ctzModel proved in vbm-simd)
+VbmSimd.inset64 | T14 | the AVX2 (x86-64) or NEON (aarch64) membership masks of 64 bytes, the stage-1 classifier (Lean model insetSpec, clause VS-12 in vbm-simd; reached only where hasAvx2 or hasNeon)
+VbmSimd.hasAvx2 | T14 | the CPU test (cpuid, xgetbv); the proof of stage1Fast_eq holds for either answer
+VbmSimd.appendBytes | T14 | the short append: up to 32 bytes of the input appended to the text region by two overlapping moves, the runtime's copySlice otherwise (Lean model copySlice, clause VS-13 in vbm-simd, its ledger T13)
+VbmSimd.classify64 | T14 | the AVX2 (x86-64) or NEON (aarch64) class masks of 64 bytes (four masks of a block from nibble tables given by Lean), the stage-1 classifier (Lean model classifyModel, clause VS-14 in vbm-simd, its ledger T14; reached only where hasAvx2 or hasNeon)
+VbmSimd.hasNeon | T14 | the NEON fact (a compile-time constant of the header: 1 on aarch64 built with clang, 0 elsewhere; vbm-simd T15); the proof of stage1Fast_eq holds for either answer

@@ -1,0 +1,13 @@
+# Code owners (for notification). Nothing waits for an owner: an agent may edit the specification, the code, the scripts, the docs and AGENTS.md and land them like any change; only the lander files and the signing keys are off limits.
+/VbmSimd/                  @witt3rd
+/VbmSimd.lean              @witt3rd
+/include/                  @witt3rd
+/docs/SPEC.md              @witt3rd
+/docs/trust-ledger.md      @witt3rd
+/docs/decisions/           @witt3rd
+/lean-toolchain            @witt3rd
+/mise.toml                 @witt3rd
+/lakefile.lean             @witt3rd
+/AGENTS.md                 @witt3rd
+/CODEOWNERS                @witt3rd
+/scripts/                  @witt3rd

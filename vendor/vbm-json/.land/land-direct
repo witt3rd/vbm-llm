@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Land with scripts/land-direct (docs/decisions/0002-land-direct.md), never open a PR. The entry point of the pinned lander (.land/tool/bin/land-direct); this file is the repository's own.
+exec "$(cd "$(dirname "$0")" && pwd)/tool/bin/land-direct" "$@"
