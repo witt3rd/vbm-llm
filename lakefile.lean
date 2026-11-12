@@ -13,9 +13,7 @@ lean_lib VbmLlm where
   globs := #[.andSubmodules `VbmLlm]
 
 /-- The proofs: may import `Std` and `Lean`; NEVER linked (nothing in `VbmLlm` may import it). -/
-lean_lib LandLedger where   -- the obligation-ledger vocabulary and walk the landing tool ships (`land-lean ledger`)
-  srcDir := ".land/tool/lean"
-  roots := #[`LandLedger, `LandWalk]
+require «land-ledger» from ".land/tool/lean"   -- the landing tool's Lean modules (the ledger vocabulary and the reach walk), a package it ships: required, never declared, so a repository that vendors this one shares a single copy
 
 lean_lib VbmLlmProofs where
   globs := #[.andSubmodules `VbmLlmProofs]
