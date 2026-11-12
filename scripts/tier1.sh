@@ -71,6 +71,7 @@ lake build VbmLlm VbmLlmProofs vbm-llm-vectors   # once, for the gates and every
 # 2a. The axiom gate: every constant of ours depends only on propext, Classical.choice, Quot.sound (--selftest: a non-standard axiom is rejected).
 bg axiom-gate .land/tool/bin/land-lean axiom --selftest
 .land/tool/bin/land-lean trust   # the trust ledger (docs/trust-ledger.md): what cannot be proven is marked as trusted, and what must be marked is derived from the tree (vbm-land docs/lean-gates.md)
+.land/tool/bin/land-lean recheck --selftest   # every proof replayed by Lean's own checker in a fresh process (vbm-land docs/lean-gates.md)
 
 # 2b. The obligation ledger: named theorems exist; spec-clause tags are in the index; proved may only rise, open may only fall, coverage may only rise. Renders docs/proof-ledger.md.
 bg ledger-gate lake env lean --run scripts/LedgerGate.lean --selftest
