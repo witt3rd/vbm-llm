@@ -13,6 +13,10 @@ lean_lib VbmLlm where
   globs := #[.andSubmodules `VbmLlm]
 
 /-- The proofs: may import `Std` and `Lean`; NEVER linked (nothing in `VbmLlm` may import it). -/
+lean_lib LandLedger where   -- the obligation-ledger vocabulary and walk the landing tool ships (`land-lean ledger`)
+  srcDir := ".land/tool/lean"
+  roots := #[`LandLedger, `LandWalk]
+
 lean_lib VbmLlmProofs where
   globs := #[.andSubmodules `VbmLlmProofs]
 

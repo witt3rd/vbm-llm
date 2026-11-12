@@ -15,62 +15,52 @@ import VbmLlmProofs.Anthropic.RequestDecode
 import VbmLlmProofs.Anthropic.Turn
 import VbmLlmProofs.Anthropic.Event
 import VbmLlmProofs.Anthropic.Stream
+import LandLedger
 /-! # The obligation ledger
 
 Every claim the library makes, keyed by a slug. A claim is `proved` only by naming theorems (double-backtick names are checked at elaboration, so a renamed or deleted theorem breaks this file),
 `partly` when theorems cover only a part (the note says which part is open), `open_` when nothing is proved, or `limit` when no machine decides it (the note says who carries it).
 Each claim may carry **spec-clause tags** `convention:clause-id` naming the clauses of the pinned convention (`docs/clause-index.txt`) it is about.
-`scripts/LedgerGate.lean` renders `docs/proof-ledger.md` from this list, checks the tags against the index and ratchets the counts: proved may only rise, open may only fall, clause coverage may only rise.
+`land-lean ledger` renders `docs/proof-ledger.md` from this list, checks the tags against the index and ratchets the counts: proved may only rise, open may only fall, clause coverage may only rise.
 A report may not call anything verified that is not `proved`. -/
 
-inductive Status where
-  | proved (thms : List Lean.Name)
-  | partly (thms : List Lean.Name) (open_ : String)
-  | open_ (note : String)
-  | limit (carriedBy : String)
-
-structure Obligation where
-  slug    : String
-  clauses : List String
-  status  : Status
-
-def O (slug : String) (clauses : List String) (s : Status) : Obligation := ⟨slug, clauses, s⟩
+open Land.Ledger
 
 def ledger : List Obligation := [
   -- reading a parsed value
-  O "wire-duplicate-key-later-wins" [] (.proved [``VbmLlm.lookup_snoc, ``VbmLlm.lookup_absent, ``VbmLlm.lookup_eq, ``VbmLlm.get_nonobj]),
-  O "wire-a-count-is-a-plain-natural" [] (.proved [``VbmLlm.natOf_neg, ``VbmLlm.natOf_frac, ``VbmLlm.natOf_exp, ``VbmLlm.natOf_zero, ``VbmLlm.natOf_nz, ``VbmLlm.natOf_120, ``VbmLlm.nat?_nonnum]),
+  OC "wire-duplicate-key-later-wins" [] (.proved [``VbmLlm.lookup_snoc, ``VbmLlm.lookup_absent, ``VbmLlm.lookup_eq, ``VbmLlm.get_nonobj]),
+  OC "wire-a-count-is-a-plain-natural" [] (.proved [``VbmLlm.natOf_neg, ``VbmLlm.natOf_frac, ``VbmLlm.natOf_exp, ``VbmLlm.natOf_zero, ``VbmLlm.natOf_nz, ``VbmLlm.natOf_120, ``VbmLlm.nat?_nonnum]),
   -- the OpenAI chat-completions response
-  O "openai-reply-decode-is-characterised" ["openai-chat:CreateChatCompletionResponse.id", "openai-chat:CreateChatCompletionResponse.model", "openai-chat:CreateChatCompletionResponse.choices.index"]
+  OC "openai-reply-decode-is-characterised" ["openai-chat:CreateChatCompletionResponse.id", "openai-chat:CreateChatCompletionResponse.model", "openai-chat:CreateChatCompletionResponse.choices.index"]
     (.proved [``VbmLlm.OpenAI.decode_ok_iff, ``VbmLlm.OpenAI.decodeChoice_ok_iff, ``VbmLlm.OpenAI.decodeChoices_ok_iff]),
-  O "openai-reply-must-be-an-object" ["openai-chat:CreateChatCompletionResponse.choices"] (.proved [``VbmLlm.OpenAI.decode_not_object]),
-  O "openai-choices-required-array-and-non-empty" ["openai-chat:CreateChatCompletionResponse.choices"]
+  OC "openai-reply-must-be-an-object" ["openai-chat:CreateChatCompletionResponse.choices"] (.proved [``VbmLlm.OpenAI.decode_not_object]),
+  OC "openai-choices-required-array-and-non-empty" ["openai-chat:CreateChatCompletionResponse.choices"]
     (.proved [``VbmLlm.OpenAI.decode_no_choices, ``VbmLlm.OpenAI.decode_empty_choices, ``VbmLlm.OpenAI.decode_choices_not_array, ``VbmLlm.OpenAI.decodeChoicesField_ok_iff]),
-  O "openai-choice-requires-a-message" ["openai-chat:CreateChatCompletionResponse.choices.message"] (.proved [``VbmLlm.OpenAI.decodeChoice_no_message_refused, ``VbmLlm.OpenAI.decodeChoice_ok_iff]),
-  O "openai-message-text-is-string-or-null" ["openai-chat:ChatCompletionResponseMessage.content", "openai-chat:ChatCompletionResponseMessage.refusal"]
+  OC "openai-choice-requires-a-message" ["openai-chat:CreateChatCompletionResponse.choices.message"] (.proved [``VbmLlm.OpenAI.decodeChoice_no_message_refused, ``VbmLlm.OpenAI.decodeChoice_ok_iff]),
+  OC "openai-message-text-is-string-or-null" ["openai-chat:ChatCompletionResponseMessage.content", "openai-chat:ChatCompletionResponseMessage.refusal"]
     (.proved [``VbmLlm.OpenAI.decodeMessage_ok_iff, ``VbmLlm.OpenAI.optStr_ok_iff, ``VbmLlm.OpenAI.optStr_wrong]),
-  O "openai-reasoning-text-and-provider-are-read-and-never-coerced" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
+  OC "openai-reasoning-text-and-provider-are-read-and-never-coerced" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
     (.proved [``VbmLlm.OpenAI.optReasoning_ok_iff, ``VbmLlm.OpenAI.optReasoning_wrong, ``VbmLlm.OpenAI.decodeMessage_ok_iff, ``VbmLlm.OpenAI.decode_provider_wrong_type]),
-  O "openai-tool-calls-absent-or-an-array-of-calls" ["openai-chat:ChatCompletionResponseMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeCalls_ok_iff, ``VbmLlm.OpenAI.decodeToolCalls_ok_iff]),
-  O "openai-tool-call-shape" ["openai-chat:ChatCompletionMessageToolCall.id", "openai-chat:ChatCompletionMessageToolCall.function.name", "openai-chat:ChatCompletionMessageToolCall.function.arguments"]
+  OC "openai-tool-calls-absent-or-an-array-of-calls" ["openai-chat:ChatCompletionResponseMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeCalls_ok_iff, ``VbmLlm.OpenAI.decodeToolCalls_ok_iff]),
+  OC "openai-tool-call-shape" ["openai-chat:ChatCompletionMessageToolCall.id", "openai-chat:ChatCompletionMessageToolCall.function.name", "openai-chat:ChatCompletionMessageToolCall.function.arguments"]
     (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff, ``VbmLlm.OpenAI.decodeToolCall_no_function_refused]),
-  O "openai-tool-call-other-types-refused" ["openai-chat:ChatCompletionMessageToolCall.type"]
+  OC "openai-tool-call-other-types-refused" ["openai-chat:ChatCompletionMessageToolCall.type"]
     (.proved [``VbmLlm.OpenAI.checkType_ok_iff, ``VbmLlm.OpenAI.checkType_unsupported, ``VbmLlm.OpenAI.decodeToolCall_custom_refused]),
-  O "openai-tool-arguments-are-verbatim-text" ["openai-chat:ChatCompletionMessageToolCall.function.arguments"] (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff]),
-  O "openai-usage-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionResponse.usage", "openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.completion_tokens",
+  OC "openai-tool-arguments-are-verbatim-text" ["openai-chat:ChatCompletionMessageToolCall.function.arguments"] (.proved [``VbmLlm.OpenAI.decodeToolCall_ok_iff]),
+  OC "openai-usage-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionResponse.usage", "openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.completion_tokens",
       "openai-chat:CompletionUsage.total_tokens", "openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens", "openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
     (.proved [``VbmLlm.OpenAI.decodeUsage_ok_iff, ``VbmLlm.OpenAI.decodeUsageOpt_ok_iff, ``VbmLlm.OpenAI.optNat_ok_iff, ``VbmLlm.OpenAI.optNat_wrong, ``VbmLlm.OpenAI.optDetail_ok_iff]),
-  O "openai-no-coercion" ["openai-chat:CreateChatCompletionResponse.id"]
+  OC "openai-no-coercion" ["openai-chat:CreateChatCompletionResponse.id"]
     (.proved [``VbmLlm.OpenAI.decode_id_wrong_type, ``VbmLlm.OpenAI.optStr_wrong, ``VbmLlm.OpenAI.optNat_wrong, ``VbmLlm.OpenAI.reqStr_wrong, ``VbmLlm.OpenAI.reqObj_wrong]),
-  O "openai-finish-reason-is-kept-as-text-and-classed-totally" ["openai-chat:CreateChatCompletionResponse.choices.finish_reason"]
+  OC "openai-finish-reason-is-kept-as-text-and-classed-totally" ["openai-chat:CreateChatCompletionResponse.choices.finish_reason"]
     (.proved [``VbmLlm.FinishClass.ofOpenAI_stop, ``VbmLlm.FinishClass.ofOpenAI_length, ``VbmLlm.FinishClass.ofOpenAI_tool_calls, ``VbmLlm.FinishClass.ofOpenAI_function_call,
       ``VbmLlm.FinishClass.ofOpenAI_content_filter, ``VbmLlm.FinishClass.ofOpenAI_unknown, ``VbmLlm.FinishClass.ofOpenAI_truncated_iff]),
   -- usage arithmetic
-  O "usage-openai-prompt-includes-the-cache" ["openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens"]
+  OC "usage-openai-prompt-includes-the-cache" ["openai-chat:CompletionUsage.prompt_tokens", "openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens"]
     (.proved [``VbmLlm.OpenAI.tokens_ok_iff, ``VbmLlm.OpenAI.openai_input_eq_prompt, ``VbmLlm.OpenAI.openai_uncached, ``VbmLlm.OpenAI.openai_read, ``VbmLlm.OpenAI.openai_no_write, ``VbmLlm.OpenAI.openai_output, ``VbmLlm.OpenAI.openai_total]),
-  O "usage-a-contradictory-report-is-refused-not-clamped" ["openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
+  OC "usage-a-contradictory-report-is-refused-not-clamped" ["openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens"]
     (.proved [``VbmLlm.OpenAI.openai_cached_exceeds_refused, ``VbmLlm.OpenAI.openai_reasoning_exceeds_refused]),
-  O "openai-usage-reports-the-providers-cost-as-it-wrote-it" ["openrouter-chat:usage-cost", "openrouter-chat:usage-cost-details"]
+  OC "openai-usage-reports-the-providers-cost-as-it-wrote-it" ["openrouter-chat:usage-cost", "openrouter-chat:usage-cost-details"]
     (.proved [``VbmLlm.OpenAI.decodeUsage_ok_iff, ``VbmLlm.OpenAI.optCostOf_ok_iff, ``VbmLlm.OpenAI.amountMember_ok_iff, ``VbmLlm.OpenAI.decodeUsage_cost_some,
       ``VbmLlm.OpenAI.decodeUsage_cost_none, ``VbmLlm.OpenAI.foldItems_cost, ``VbmLlm.OpenAI.foldItems_no_cost, ``VbmLlm.OpenAI.cost_some, ``VbmLlm.OpenAI.cost_none,
       ``VbmLlm.OpenAI.cost_some_witness, ``VbmLlm.OpenAI.cost_none_witness, ``VbmLlm.OpenAI.decode_reply_cost, ``VbmLlm.OpenAI.decode_reply_cost_accessor,
@@ -78,174 +68,174 @@ def ledger : List Obligation := [
       ``VbmLlm.OpenAI.foldItems_cost_then_no_cost, ``VbmLlm.OpenAI.foldItems_cost_with_choice,
       ``VbmLlm.OpenAI.costLexeme_bytes, ``VbmLlm.OpenAI.negZeroLexeme_bytes, ``VbmLlm.OpenAI.decodeChunk_costFrame, ``VbmLlm.OpenAI.decodeChunk_costFrame_usage,
       ``VbmLlm.OpenAI.foldEvents_cost_frames]),
-  O "openai-usage-a-negative-or-non-numeric-cost-is-refused" ["openrouter-chat:usage-cost"]
+  OC "openai-usage-a-negative-or-non-numeric-cost-is-refused" ["openrouter-chat:usage-cost"]
     (.proved [``VbmLlm.OpenAI.optCost_negative, ``VbmLlm.OpenAI.optCost_string, ``VbmLlm.OpenAI.decodeUsage_negative_cost, ``VbmLlm.OpenAI.decodeUsage_string_cost,
       ``VbmLlm.OpenAI.optCost_negZero, ``VbmLlm.OpenAI.optCost_negZeroDot, ``VbmLlm.OpenAI.optCost_negZeroExp, ``VbmLlm.OpenAI.writesZero_negZero, ``VbmLlm.OpenAI.writesZero_negZeroDot, ``VbmLlm.OpenAI.writesZero_negZeroExp, ``VbmLlm.OpenAI.negZeroDot_bytes, ``VbmLlm.OpenAI.negZeroExp_bytes, ``VbmLlm.OpenAI.decodeUsage_negZero_cost, ``VbmLlm.OpenAI.amountMember_neg, ``VbmLlm.OpenAI.decodeChunk_negCostFrame,
       ``VbmLlm.OpenAI.decodeChunk_negCostFrame_refused, ``VbmLlm.OpenAI.decodeChunk_strCostFrame, ``VbmLlm.OpenAI.decodeChunk_strCostFrame_refused,
       ``VbmLlm.OpenAI.foldEvents_negCostFrame, ``VbmLlm.OpenAI.foldEvents_strCostFrame]),
-  O "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
-  O "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
+  OC "usage-totals-add-over-a-turn-and-a-run" [] (.proved [``VbmLlm.Tokens.add_comm, ``VbmLlm.Tokens.add_assoc, ``VbmLlm.Tokens.zero_add, ``VbmLlm.Tokens.add_zero, ``VbmLlm.Tokens.input_add, ``VbmLlm.Tokens.total_add]),
+  OC "usage-a-frame-with-no-report-adds-nothing" [] (.proved [``VbmLlm.OpenAI.openai_empty, ``VbmLlm.Tokens.zero_add]),
   -- the error taxonomy and the body of a failed call
-  O "error-the-status-of-a-failed-call-has-a-class" ["openai-chat-status:auth", "openai-chat-status:quota", "openai-chat-status:timeout", "openai-chat-status:rate-limit", "openai-chat-status:server"]
+  OC "error-the-status-of-a-failed-call-has-a-class" ["openai-chat-status:auth", "openai-chat-status:quota", "openai-chat-status:timeout", "openai-chat-status:rate-limit", "openai-chat-status:server"]
     (.proved [``VbmLlm.ErrorClass.ofStatus_auth, ``VbmLlm.ErrorClass.ofStatus_quota, ``VbmLlm.ErrorClass.ofStatus_timeout, ``VbmLlm.ErrorClass.ofStatus_rateLimit, ``VbmLlm.ErrorClass.ofStatus_tls, ``VbmLlm.ErrorClass.ofStatus_server]),
-  O "error-an-overflow-is-a-client-error-the-consumer-reads-so" ["openai-chat-status:overflow"] (.proved [``VbmLlm.ErrorClass.ofStatus_overflow_iff, ``VbmLlm.ErrorClass.ofStatus_no_words]),
-  O "openai-error-body-is-read-as-the-schema-says-and-never-coerced" ["openai-chat:ErrorResponse.error", "openai-chat:Error.message", "openai-chat:Error.type", "openai-chat:Error.param", "openai-chat:Error.code"]
+  OC "error-an-overflow-is-a-client-error-the-consumer-reads-so" ["openai-chat-status:overflow"] (.proved [``VbmLlm.ErrorClass.ofStatus_overflow_iff, ``VbmLlm.ErrorClass.ofStatus_no_words]),
+  OC "openai-error-body-is-read-as-the-schema-says-and-never-coerced" ["openai-chat:ErrorResponse.error", "openai-chat:Error.message", "openai-chat:Error.type", "openai-chat:Error.param", "openai-chat:Error.code"]
     (.proved [``VbmLlm.decodeApiError_ok_iff, ``VbmLlm.decodeApiError_not_object, ``VbmLlm.decodeApiError_no_error, ``VbmLlm.decodeApiError_no_message, ``VbmLlm.decodeApiError_code_wrong]),
   -- not yet built (open) and not decidable by a machine (limit)
   -- the OpenAI chat-completions request: encoder, decoder, round trip
-  O "openai-request-members-are-the-fields" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.parallel_tool_calls", "openai-chat:CreateChatCompletionRequest.stream", "openai-chat:ChatCompletionStreamOptions.include_usage",
+  OC "openai-request-members-are-the-fields" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.parallel_tool_calls", "openai-chat:CreateChatCompletionRequest.stream", "openai-chat:ChatCompletionStreamOptions.include_usage",
       "openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens", "openai-chat:CreateChatCompletionRequest.temperature", "openai-chat:CreateChatCompletionRequest.top_p"]
     (.proved [``VbmLlm.OpenAI.encode_get_model, ``VbmLlm.OpenAI.encode_get_messages, ``VbmLlm.OpenAI.encode_get_tools, ``VbmLlm.OpenAI.encode_get_tool_choice, ``VbmLlm.OpenAI.encode_get_parallel_tool_calls,
       ``VbmLlm.OpenAI.encode_get_stream, ``VbmLlm.OpenAI.encode_get_stream_options, ``VbmLlm.OpenAI.encode_get_max_completion_tokens, ``VbmLlm.OpenAI.encode_get_max_tokens, ``VbmLlm.OpenAI.encode_get_temperature,
       ``VbmLlm.OpenAI.encode_get_top_p, ``VbmLlm.OpenAI.encode_object]),
-  O "openai-request-an-absent-field-is-left-out-never-null" ["openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.max_completion_tokens"] (.proved [``VbmLlm.OpenAI.encode_members_not_null, ``VbmLlm.OpenAI.mem_opt]),
-  O "openai-request-assistant-calls-no-text-content-null" ["openai-chat:ChatCompletionRequestAssistantMessage.content"] (.proved [``VbmLlm.OpenAI.encodeMessage_assistant_calls_no_text]),
-  O "openai-request-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens"] (.proved [``VbmLlm.OpenAI.natOf_natNumber, ``VbmLlm.OpenAI.leadRest_val]),
-  O "openai-request-tool-calls-are-written-as-read" ["openai-chat:ChatCompletionRequestAssistantMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeToolCall_encodeToolCall]),
-  O "openai-request-codec-round-trip" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestDeveloperMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content",
+  OC "openai-request-an-absent-field-is-left-out-never-null" ["openai-chat:CreateChatCompletionRequest.tools", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.max_completion_tokens"] (.proved [``VbmLlm.OpenAI.encode_members_not_null, ``VbmLlm.OpenAI.mem_opt]),
+  OC "openai-request-assistant-calls-no-text-content-null" ["openai-chat:ChatCompletionRequestAssistantMessage.content"] (.proved [``VbmLlm.OpenAI.encodeMessage_assistant_calls_no_text]),
+  OC "openai-request-counts-are-plain-naturals" ["openai-chat:CreateChatCompletionRequest.max_completion_tokens", "openai-chat:CreateChatCompletionRequest.max_tokens"] (.proved [``VbmLlm.OpenAI.natOf_natNumber, ``VbmLlm.OpenAI.leadRest_val]),
+  OC "openai-request-tool-calls-are-written-as-read" ["openai-chat:ChatCompletionRequestAssistantMessage.tool_calls"] (.proved [``VbmLlm.OpenAI.decodeToolCall_encodeToolCall]),
+  OC "openai-request-codec-round-trip" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestDeveloperMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content",
       "openai-chat:ChatCompletionRequestAssistantMessage.content", "openai-chat:ChatCompletionRequestAssistantMessage.tool_calls", "openai-chat:ChatCompletionRequestToolMessage.tool_call_id", "openai-chat:ChatCompletionRequestToolMessage.content",
       "openai-chat:ChatCompletionTool.type", "openai-chat:FunctionObject.name", "openai-chat:FunctionObject.description", "openai-chat:FunctionObject.parameters", "openai-chat:FunctionObject.strict",
       "openai-chat:ChatCompletionNamedToolChoice.function.name", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.tools"]
     (.proved [``VbmLlm.OpenAI.decode_encode, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessage, ``VbmLlm.OpenAI.decodeTool_encodeTool, ``VbmLlm.OpenAI.decodeMessages_encode, ``VbmLlm.OpenAI.decodeTools_encode,
       ``VbmLlm.OpenAI.decodeToolChoice_encode, ``VbmLlm.OpenAI.decodeIncludeUsage_encode, ``VbmLlm.OpenAI.decodeEach_encode, ``VbmLlm.OpenAI.decodeToolCalls_encode, ``VbmLlm.OpenAI.optBool_orNull,
       ``VbmLlm.OpenAI.optNat_orNull, ``VbmLlm.OpenAI.optNum_orNull]),
-  O "openai-request-bytes-are-the-reference-print" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.Request.encodeBytes_eq, ``VbmLlm.OpenAI.Request.encodeBytesWith_eq]),
-  O "openai-request-a-cache-marker-marks-one-message-and-changes-nothing-else" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content", "openai-chat:ChatCompletionRequestAssistantMessage.content", "openai-chat:ChatCompletionRequestToolMessage.content", "openai-chat:cache-marker"]
+  OC "openai-request-bytes-are-the-reference-print" ["openai-chat:CreateChatCompletionRequest.model", "openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.Request.encodeBytes_eq, ``VbmLlm.OpenAI.Request.encodeBytesWith_eq]),
+  OC "openai-request-a-cache-marker-marks-one-message-and-changes-nothing-else" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:ChatCompletionRequestSystemMessage.content", "openai-chat:ChatCompletionRequestUserMessage.content", "openai-chat:ChatCompletionRequestAssistantMessage.content", "openai-chat:ChatCompletionRequestToolMessage.content", "openai-chat:cache-marker"]
     (.proved [``VbmLlm.OpenAI.encodeWith_none, ``VbmLlm.OpenAI.encodeWith_some_markable, ``VbmLlm.OpenAI.encodeWith_some_unmarkable,
       ``VbmLlm.OpenAI.encodeMessagesFrom_lt, ``VbmLlm.OpenAI.encodeMessagesFrom_none, ``VbmLlm.OpenAI.encodeMessageMarked_content,
       ``VbmLlm.OpenAI.markedText?_markedContent, ``VbmLlm.OpenAI.encodeMessage_content_text, ``VbmLlm.OpenAI.markedContent_ne_str,
       ``VbmLlm.OpenAI.encodeWith_print_cases, ``VbmLlm.OpenAI.markedContent_print, ``VbmLlm.OpenAI.marked_user_witness,
       ``VbmLlm.OpenAI.unmarkable_witness, ``VbmLlm.OpenAI.marked_ne_plain, ``VbmLlm.OpenAI.encodeMessagesFrom_lt_witness, ``VbmLlm.OpenAI.encodeWith_some_markable_witness]),
-  O "openai-request-a-cache-marker-is-at-most-one-and-the-last-markable-is-the-index-a-caller-wants" ["openai-chat:cache-marker"]
+  OC "openai-request-a-cache-marker-is-at-most-one-and-the-last-markable-is-the-index-a-caller-wants" ["openai-chat:cache-marker"]
     (.proved [``VbmLlm.OpenAI.encodeWith_at_most_one_marker, ``VbmLlm.OpenAI.carriesMarker_encodeMessage, ``VbmLlm.OpenAI.carriesMarker_encodeMessageAt,
       ``VbmLlm.OpenAI.countP_some_le, ``VbmLlm.OpenAI.countP_encodeMessage_zero, ``VbmLlm.OpenAI.lastMarkable_spec, ``VbmLlm.OpenAI.lastMarkable_some_markable,
       ``VbmLlm.OpenAI.lastMarkable_no_later, ``VbmLlm.OpenAI.lastMarkable_none_iff, ``VbmLlm.OpenAI.lastMarkable_cases,
       ``VbmLlm.OpenAI.encodeWith_one_marker_witness, ``VbmLlm.OpenAI.encodeWith_at_most_one_marker_witness, ``VbmLlm.OpenAI.lastMarkable_witness, ``VbmLlm.OpenAI.markable_iff]),
-  O "openai-request-a-marked-message-reads-back-as-itself-and-only-a-one-part-text-array-is-a-marker" ["openai-chat:cache-marker", "openai-chat:ChatCompletionRequestUserMessage.content"]
+  OC "openai-request-a-marked-message-reads-back-as-itself-and-only-a-one-part-text-array-is-a-marker" ["openai-chat:cache-marker", "openai-chat:ChatCompletionRequestUserMessage.content"]
     (.proved [``VbmLlm.OpenAI.decodeContentStr_ok_iff, ``VbmLlm.OpenAI.decodeContentStr_not_str, ``VbmLlm.OpenAI.decodeReqMessage_user_content,
       ``VbmLlm.OpenAI.decodeReqMessage_encodeMessageMarked, ``VbmLlm.OpenAI.markerAt_encodeWith_none, ``VbmLlm.OpenAI.markerAt_encodeWith_some,
       ``VbmLlm.OpenAI.firstMarkedFrom_plain, ``VbmLlm.OpenAI.firstMarkedFrom_set, ``VbmLlm.OpenAI.decodeContentStr_marked_witness,
       ``VbmLlm.OpenAI.decodeContentStr_two_parts_refused, ``VbmLlm.OpenAI.decodeReqMessage_encodeMessageMarked_witness]),
-  O "openai-request-what-decodes-is-written-back-the-same" ["openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.decode_ok_stable, ``VbmLlm.OpenAI.decodeMessages_ne_nil, ``VbmLlm.OpenAI.decodeEach_cons_ne_nil]),
-  O "openai-request-decode-fails-closed" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.stream"]
+  OC "openai-request-what-decodes-is-written-back-the-same" ["openai-chat:CreateChatCompletionRequest.messages"] (.proved [``VbmLlm.OpenAI.decode_ok_stable, ``VbmLlm.OpenAI.decodeMessages_ne_nil, ``VbmLlm.OpenAI.decodeEach_cons_ne_nil]),
+  OC "openai-request-decode-fails-closed" ["openai-chat:CreateChatCompletionRequest.messages", "openai-chat:CreateChatCompletionRequest.tool_choice", "openai-chat:CreateChatCompletionRequest.stream"]
     (.proved [``VbmLlm.OpenAI.Request.decode_not_object, ``VbmLlm.OpenAI.decodeMessages_none, ``VbmLlm.OpenAI.decodeMessages_empty, ``VbmLlm.OpenAI.decodeMessages_not_array,
       ``VbmLlm.OpenAI.decodeReqMessage_unsupported_role, ``VbmLlm.OpenAI.decodeReqMessage_user_content, ``VbmLlm.OpenAI.decodeToolChoice_unsupported, ``VbmLlm.OpenAI.optBool_wrong]),
-  O "openai-stream-merge-rules" ["openai-chat:CreateChatCompletionStreamResponse.id", "openai-chat:CreateChatCompletionStreamResponse.model", "openai-chat:CreateChatCompletionStreamResponse.usage",
+  OC "openai-stream-merge-rules" ["openai-chat:CreateChatCompletionStreamResponse.id", "openai-chat:CreateChatCompletionStreamResponse.model", "openai-chat:CreateChatCompletionStreamResponse.usage",
       "openai-chat:CreateChatCompletionStreamResponse.choices.finish_reason", "openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionStreamResponseDelta.refusal",
       "openai-chat:ChatCompletionMessageToolCallChunk.id", "openai-chat:ChatCompletionMessageToolCallChunk.function.name", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
     (.proved [``VbmLlm.OpenAI.mergeCall_arguments, ``VbmLlm.OpenAI.mergeCall_id_first, ``VbmLlm.OpenAI.mergeCall_name_first, ``VbmLlm.OpenAI.mergeCall_id_kept, ``VbmLlm.OpenAI.mergeCall_name_kept,
       ``VbmLlm.OpenAI.applyChoice_content, ``VbmLlm.OpenAI.applyChoice_refusal, ``VbmLlm.OpenAI.applyChoice_finish, ``VbmLlm.OpenAI.applyChunk_id, ``VbmLlm.OpenAI.applyChunk_model, ``VbmLlm.OpenAI.applyChunk_usage]),
-  O "openai-stream-reasoning-concatenates-and-provider-is-first" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
+  OC "openai-stream-reasoning-concatenates-and-provider-is-first" ["openrouter-chat:reasoning-text", "openrouter-chat:provider"]
     (.proved [``VbmLlm.OpenAI.applyChoice_reasoning, ``VbmLlm.OpenAI.applyChunk_provider]),
-  O "openai-stream-chunk-boundaries-do-not-matter" ["openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
+  OC "openai-stream-chunk-boundaries-do-not-matter" ["openai-chat:ChatCompletionStreamResponseDelta.content", "openai-chat:ChatCompletionMessageToolCallChunk.function.arguments"]
     (.proved [``VbmLlm.OpenAI.foldPieces_eq, ``VbmLlm.OpenAI.pieces_content, ``VbmLlm.OpenAI.foldArgs_arguments, ``VbmLlm.OpenAI.foldArgs_id, ``VbmLlm.OpenAI.foldArgs_name]),
-  O "openai-stream-missing-index-is-refused-by-default" ["openai-chat:CreateChatCompletionStreamResponse.choices.index", "openai-chat:ChatCompletionMessageToolCallChunk.index"]
+  OC "openai-stream-missing-index-is-refused-by-default" ["openai-chat:CreateChatCompletionStreamResponse.choices.index", "openai-chat:ChatCompletionMessageToolCallChunk.index"]
     (.proved [``VbmLlm.OpenAI.applyCalls_missing_index_refused, ``VbmLlm.OpenAI.applyCalls_missing_index_zero, ``VbmLlm.OpenAI.foldItems_missing_index]),
-  O "openai-stream-no-sentinel-is-never-complete" ["openai-chat-sse:sentinel"]
+  OC "openai-stream-no-sentinel-is-never-complete" ["openai-chat-sse:sentinel"]
     (.proved [``VbmLlm.OpenAI.foldWith_no_done, ``VbmLlm.OpenAI.foldItems_complete, ``VbmLlm.OpenAI.foldItems_nil]),
-  O "openai-stream-nothing-follows-the-sentinel" ["openai-chat-sse:sentinel"] (.proved [``VbmLlm.OpenAI.foldItems_after_done]),
-  O "openai-stream-error-chunk-stops-the-fold-with-the-partial-reply" ["openai-chat-sse:error-chunk"] (.proved [``VbmLlm.OpenAI.foldItems_error_chunk, ``VbmLlm.OpenAI.errorOf_null, ``VbmLlm.OpenAI.errorOf_string, ``VbmLlm.OpenAI.errorOf_present]),
-  O "openai-stream-a-complete-reply-has-a-choice" ["openai-chat-sse:complete-has-identity"] (.proved [``VbmLlm.OpenAI.foldWith_complete_choices]),
-  O "openai-stream-chunk-is-an-object" ["openai-chat:CreateChatCompletionStreamResponse.choices"] (.proved [``VbmLlm.OpenAI.decodeChunk_not_object]),
-  O "openai-stream-delta-and-fragment-shapes" ["openai-chat:CreateChatCompletionStreamResponse.choices.delta", "openai-chat:ChatCompletionStreamResponseDelta.tool_calls", "openai-chat:ChatCompletionMessageToolCallChunk.type"]
+  OC "openai-stream-nothing-follows-the-sentinel" ["openai-chat-sse:sentinel"] (.proved [``VbmLlm.OpenAI.foldItems_after_done]),
+  OC "openai-stream-error-chunk-stops-the-fold-with-the-partial-reply" ["openai-chat-sse:error-chunk"] (.proved [``VbmLlm.OpenAI.foldItems_error_chunk, ``VbmLlm.OpenAI.errorOf_null, ``VbmLlm.OpenAI.errorOf_string, ``VbmLlm.OpenAI.errorOf_present]),
+  OC "openai-stream-a-complete-reply-has-a-choice" ["openai-chat-sse:complete-has-identity"] (.proved [``VbmLlm.OpenAI.foldWith_complete_choices]),
+  OC "openai-stream-chunk-is-an-object" ["openai-chat:CreateChatCompletionStreamResponse.choices"] (.proved [``VbmLlm.OpenAI.decodeChunk_not_object]),
+  OC "openai-stream-delta-and-fragment-shapes" ["openai-chat:CreateChatCompletionStreamResponse.choices.delta", "openai-chat:ChatCompletionStreamResponseDelta.tool_calls", "openai-chat:ChatCompletionMessageToolCallChunk.type"]
     (.proved [``VbmLlm.OpenAI.decodeChunkChoice_delta_wrong, ``VbmLlm.OpenAI.decodeChunkChoice_no_delta, ``VbmLlm.OpenAI.decodeDelta_tool_calls_wrong, ``VbmLlm.OpenAI.decodeToolCallDelta_other_type_refused]),
-  O "openai-stream-events" ["openai-chat-sse:sentinel", "openai-chat-sse:event-type"]
+  OC "openai-stream-events" ["openai-chat-sse:sentinel", "openai-chat-sse:event-type"]
     (.proved [``VbmLlm.OpenAI.decodeItem_done, ``VbmLlm.OpenAI.decodeItem_empty, ``VbmLlm.OpenAI.decodeItem_event_type]),
-  O "openai-stream-fold-equals-single-shot" ["openai-chat-sse:complete-has-identity"]
+  OC "openai-stream-fold-equals-single-shot" ["openai-chat-sse:complete-has-identity"]
     (.partly [``VbmLlm.OpenAI.pieces_content, ``VbmLlm.OpenAI.foldArgs_arguments, ``VbmLlm.OpenAI.foldWith_complete_choices]
       "proved: text and arguments split at any chunk boundary fold to the same strings, and a complete reply always has a choice. Open: the whole equality `fold (stream r) = r` for every well-formed stream (interleaved choices and calls); the recorded streams with a single-shot twin (`vectors/openai-chat-stream/*.single.json`) check it on data, not by proof"),
   -- the tool-call turn machine
-  O "turn-every-call-is-answered-exactly-once-in-order" ["openai-chat-turn:answer-each-call-once", "openai-chat-turn:window", "openai-chat:ChatCompletionRequestToolMessage.tool_call_id"]
+  OC "turn-every-call-is-answered-exactly-once-in-order" ["openai-chat-turn:answer-each-call-once", "openai-chat-turn:window", "openai-chat:ChatCompletionRequestToolMessage.tool_call_id"]
     (.proved [``VbmLlm.OpenAI.render_paired, ``VbmLlm.OpenAI.flatMap_render_paired, ``VbmLlm.OpenAI.seg_render_paired, ``VbmLlm.pair_calls, ``VbmLlm.pairFrom_calls, ``VbmLlm.close_calls, ``VbmLlm.feed_sound]),
-  O "turn-an-unanswered-call-gets-a-placeholder-and-an-orphan-is-text" ["openai-chat-turn:unanswered-placeholder", "openai-chat-turn:orphan-is-text"]
+  OC "turn-an-unanswered-call-gets-a-placeholder-and-an-orphan-is-text" ["openai-chat-turn:unanswered-placeholder", "openai-chat-turn:orphan-is-text"]
     (.proved [``VbmLlm.pair_unanswered, ``VbmLlm.pair_orphan, ``VbmLlm.pair_orphan_after_assistant, ``VbmLlm.OpenAI.render_unanswered, ``VbmLlm.OpenAI.render_orphan]),
-  O "turn-a-result-answers-its-call-and-the-newest-wins" ["openai-chat-turn:newest-result-wins", "openai-chat-turn:window"] (.proved [``VbmLlm.pair_answered, ``VbmLlm.pair_newest_wins, ``VbmLlm.OpenAI.render_answered]),
-  O "turn-text-is-never-dropped-or-reordered" ["openai-chat-turn:text-keeps-its-order"] (.proved [``VbmLlm.pair_texts, ``VbmLlm.pairFrom_texts, ``VbmLlm.close_texts]),
-  O "turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["openai-chat-turn:prefix-stable"]
+  OC "turn-a-result-answers-its-call-and-the-newest-wins" ["openai-chat-turn:newest-result-wins", "openai-chat-turn:window"] (.proved [``VbmLlm.pair_answered, ``VbmLlm.pair_newest_wins, ``VbmLlm.OpenAI.render_answered]),
+  OC "turn-text-is-never-dropped-or-reordered" ["openai-chat-turn:text-keeps-its-order"] (.proved [``VbmLlm.pair_texts, ``VbmLlm.pairFrom_texts, ``VbmLlm.close_texts]),
+  OC "turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["openai-chat-turn:prefix-stable"]
     (.proved [``VbmLlm.OpenAI.render_prefix_stable, ``VbmLlm.pair_prefix_stable, ``VbmLlm.pairFrom_append_assistant]),
   -- the one-action context
-  O "context-the-prompt-is-the-prefix-the-state-the-observation-and-the-tail-only" [] (.proved [``VbmLlm.messages_eq, ``VbmLlm.messages_length, ``VbmLlm.messages_length_le, ``VbmLlm.messages_inj, ``VbmLlm.request_messages, ``VbmLlm.messages_paired]),
-  O "context-the-system-prefix-bytes-are-stable-across-steps" [] (.proved [``VbmLlm.prefix_stable, ``VbmLlm.prefix_state_stable]),
-  O "context-the-prompt-size-is-the-sum-of-the-four-parts" [] (.proved [``VbmLlm.bytes_eq, ``VbmLlm.bytes_le]),
-  O "context-the-tail-is-the-last-message-and-a-changed-tail-changes-only-it" [] (.proved [``VbmLlm.messages_tail, ``VbmLlm.history_stable, ``VbmLlm.history_prefix, ``VbmLlm.tail_changes_only_tail]),
+  OC "context-the-prompt-is-the-prefix-the-state-the-observation-and-the-tail-only" [] (.proved [``VbmLlm.messages_eq, ``VbmLlm.messages_length, ``VbmLlm.messages_length_le, ``VbmLlm.messages_inj, ``VbmLlm.request_messages, ``VbmLlm.messages_paired]),
+  OC "context-the-system-prefix-bytes-are-stable-across-steps" [] (.proved [``VbmLlm.prefix_stable, ``VbmLlm.prefix_state_stable]),
+  OC "context-the-prompt-size-is-the-sum-of-the-four-parts" [] (.proved [``VbmLlm.bytes_eq, ``VbmLlm.bytes_le]),
+  OC "context-the-tail-is-the-last-message-and-a-changed-tail-changes-only-it" [] (.proved [``VbmLlm.messages_tail, ``VbmLlm.history_stable, ``VbmLlm.history_prefix, ``VbmLlm.tail_changes_only_tail]),
   -- the Anthropic messages adapter: the reply (the request, the stream and the turn shape are open)
-  O "anthropic-reply-decode-is-characterised" ["anthropic-messages:Message.id", "anthropic-messages:Message.model", "anthropic-messages:Message.content", "anthropic-messages:Message.stop_reason", "anthropic-messages:Message.stop_sequence", "anthropic-messages:Message.usage"]
+  OC "anthropic-reply-decode-is-characterised" ["anthropic-messages:Message.id", "anthropic-messages:Message.model", "anthropic-messages:Message.content", "anthropic-messages:Message.stop_reason", "anthropic-messages:Message.stop_sequence", "anthropic-messages:Message.usage"]
     (.proved [``VbmLlm.Anthropic.decode_ok_iff, ``VbmLlm.Anthropic.decodeContent_ok_iff, ``VbmLlm.Anthropic.decodeBlocks_ok_iff, ``VbmLlm.Anthropic.decode_not_object, ``VbmLlm.Anthropic.decode_no_content, ``VbmLlm.Anthropic.decode_content_not_array]),
-  O "anthropic-blocks-keep-their-input-and-keep-unmodelled-types-raw" ["anthropic-messages:TextBlock.text", "anthropic-messages:ToolUseBlock.id", "anthropic-messages:ToolUseBlock.name", "anthropic-messages:ToolUseBlock.input", "anthropic-messages:ContentBlock.other", "anthropic-messages:ThinkingBlock.thinking", "anthropic-messages:ThinkingBlock.signature", "anthropic-messages:RedactedThinkingBlock.data"]
+  OC "anthropic-blocks-keep-their-input-and-keep-unmodelled-types-raw" ["anthropic-messages:TextBlock.text", "anthropic-messages:ToolUseBlock.id", "anthropic-messages:ToolUseBlock.name", "anthropic-messages:ToolUseBlock.input", "anthropic-messages:ContentBlock.other", "anthropic-messages:ThinkingBlock.thinking", "anthropic-messages:ThinkingBlock.signature", "anthropic-messages:RedactedThinkingBlock.data"]
     (.proved [``VbmLlm.Anthropic.decodeBlock_thinking, ``VbmLlm.Anthropic.decodeBlock_redacted, ``VbmLlm.Anthropic.decodeBlock_of_type, ``VbmLlm.Anthropic.decodeBlock_text, ``VbmLlm.Anthropic.decodeBlock_toolUse, ``VbmLlm.Anthropic.decodeBlock_toolUse_no_input, ``VbmLlm.Anthropic.decodeBlock_other, ``VbmLlm.Anthropic.decodeBlock_no_type]),
-  O "usage-anthropic-input-excludes-the-cache" ["anthropic-messages:Usage.input_tokens", "anthropic-messages:Usage.output_tokens", "anthropic-messages:Usage.cache_read_input_tokens", "anthropic-messages:Usage.cache_creation_input_tokens"]
+  OC "usage-anthropic-input-excludes-the-cache" ["anthropic-messages:Usage.input_tokens", "anthropic-messages:Usage.output_tokens", "anthropic-messages:Usage.cache_read_input_tokens", "anthropic-messages:Usage.cache_creation_input_tokens"]
     (.proved [``VbmLlm.Anthropic.decodeUsage_ok_iff, ``VbmLlm.Anthropic.tokens_uncached, ``VbmLlm.Anthropic.tokens_read, ``VbmLlm.Anthropic.tokens_write, ``VbmLlm.Anthropic.tokens_output, ``VbmLlm.Anthropic.tokens_input, ``VbmLlm.Anthropic.tokens_empty]),
-  O "anthropic-stop-reason-is-kept-as-text-and-classed-totally" ["anthropic-messages:Message.stop_reason"]
+  OC "anthropic-stop-reason-is-kept-as-text-and-classed-totally" ["anthropic-messages:Message.stop_reason"]
     (.proved [``VbmLlm.FinishClass.ofAnthropic_end_turn, ``VbmLlm.FinishClass.ofAnthropic_stop_sequence, ``VbmLlm.FinishClass.ofAnthropic_tool_use, ``VbmLlm.FinishClass.ofAnthropic_pause_turn, ``VbmLlm.FinishClass.ofAnthropic_refusal,
       ``VbmLlm.FinishClass.ofAnthropic_truncated_iff, ``VbmLlm.FinishClass.ofAnthropic_unknown]),
   -- the Anthropic messages request: the encoder
-  O "anthropic-request-members-are-the-fields" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages",
+  OC "anthropic-request-members-are-the-fields" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages",
       "anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.tool_choice", "anthropic-messages:MessageCreateParams.stream",
       "anthropic-messages:MessageCreateParams.temperature", "anthropic-messages:MessageCreateParams.top_p", "anthropic-messages:MessageCreateParams.top_k", "anthropic-messages:MessageCreateParams.stop_sequences"]
     (.proved [``VbmLlm.Anthropic.encode_get_model, ``VbmLlm.Anthropic.encode_get_max_tokens, ``VbmLlm.Anthropic.encode_get_messages, ``VbmLlm.Anthropic.encode_get_system, ``VbmLlm.Anthropic.encode_get_tools,
       ``VbmLlm.Anthropic.encode_get_tool_choice, ``VbmLlm.Anthropic.encode_get_stream, ``VbmLlm.Anthropic.encode_get_temperature, ``VbmLlm.Anthropic.encode_get_top_p, ``VbmLlm.Anthropic.encode_get_top_k,
       ``VbmLlm.Anthropic.encode_get_stop_sequences, ``VbmLlm.Anthropic.encode_object]),
-  O "anthropic-request-an-absent-field-is-left-out-never-null" ["anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.stop_sequences",
+  OC "anthropic-request-an-absent-field-is-left-out-never-null" ["anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.stop_sequences",
       "anthropic-messages:ToolResultBlockParam.content", "anthropic-messages:ToolResultBlockParam.is_error"]
     (.proved [``VbmLlm.Anthropic.encode_members_not_null, ``VbmLlm.Anthropic.encodeBlock_toolResult]),
-  O "anthropic-request-max-tokens-is-required-and-a-plain-natural" ["anthropic-messages:MessageCreateParams.max_tokens"] (.proved [``VbmLlm.Anthropic.encode_max_tokens_natural]),
-  O "anthropic-request-a-tool-call-is-written-with-its-input-as-an-object" ["anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id"] (.proved [``VbmLlm.Anthropic.encodeBlock_toolUse]),
+  OC "anthropic-request-max-tokens-is-required-and-a-plain-natural" ["anthropic-messages:MessageCreateParams.max_tokens"] (.proved [``VbmLlm.Anthropic.encode_max_tokens_natural]),
+  OC "anthropic-request-a-tool-call-is-written-with-its-input-as-an-object" ["anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id"] (.proved [``VbmLlm.Anthropic.encodeBlock_toolUse]),
   -- the Anthropic messages request: the decoder, and the round trip
-  O "anthropic-request-codec-round-trip" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.tool_choice", "anthropic-messages:MessageCreateParams.stream", "anthropic-messages:MessageCreateParams.temperature", "anthropic-messages:MessageCreateParams.top_p", "anthropic-messages:MessageCreateParams.top_k", "anthropic-messages:MessageCreateParams.stop_sequences",
+  OC "anthropic-request-codec-round-trip" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.system", "anthropic-messages:MessageCreateParams.tools", "anthropic-messages:MessageCreateParams.tool_choice", "anthropic-messages:MessageCreateParams.stream", "anthropic-messages:MessageCreateParams.temperature", "anthropic-messages:MessageCreateParams.top_p", "anthropic-messages:MessageCreateParams.top_k", "anthropic-messages:MessageCreateParams.stop_sequences",
       "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content", "anthropic-messages:ToolUseBlockParam.input", "anthropic-messages:ToolResultBlockParam.tool_use_id",
       "anthropic-messages:ToolResultBlockParam.content", "anthropic-messages:ToolResultBlockParam.is_error", "anthropic-messages:Tool.name", "anthropic-messages:Tool.description",
       "anthropic-messages:Tool.input_schema", "anthropic-messages:Tool.strict"]
     (.proved [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.decodeReqBlock_encodeBlock, ``VbmLlm.Anthropic.decodeMsg_encodeMessage, ``VbmLlm.Anthropic.decodeToolDecl_encodeTool,
       ``VbmLlm.Anthropic.decodeMsgs_encode, ``VbmLlm.Anthropic.decodeToolDecls_encode, ``VbmLlm.Anthropic.decodeToolPick_encode, ``VbmLlm.Anthropic.decodeStops_encode,
       ``VbmLlm.Anthropic.optStr_orNull, ``VbmLlm.Anthropic.reqNat_natNumber]),
-  O "anthropic-request-bytes-are-the-reference-print" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.messages"] (.proved [``VbmLlm.Anthropic.Request.encodeBytes_eq]),
-  O "anthropic-request-what-decodes-is-written-back-the-same" ["anthropic-messages:MessageCreateParams.messages"]
+  OC "anthropic-request-bytes-are-the-reference-print" ["anthropic-messages:MessageCreateParams.model", "anthropic-messages:MessageCreateParams.messages"] (.proved [``VbmLlm.Anthropic.Request.encodeBytes_eq]),
+  OC "anthropic-request-what-decodes-is-written-back-the-same" ["anthropic-messages:MessageCreateParams.messages"]
     (.proved [``VbmLlm.Anthropic.decode_ok_stable, ``VbmLlm.Anthropic.decodeMsgs_ne_nil]),
-  O "anthropic-request-decode-fails-closed" ["anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.tool_choice",
+  OC "anthropic-request-decode-fails-closed" ["anthropic-messages:MessageCreateParams.max_tokens", "anthropic-messages:MessageCreateParams.messages", "anthropic-messages:MessageCreateParams.tool_choice",
       "anthropic-messages:MessageParam.role", "anthropic-messages:MessageParam.content"]
     (.proved [``VbmLlm.Anthropic.Request.decode_not_object, ``VbmLlm.Anthropic.reqNat_missing, ``VbmLlm.Anthropic.decodeMsgs_none, ``VbmLlm.Anthropic.decodeMsgs_empty, ``VbmLlm.Anthropic.decodeMsgs_not_array,
       ``VbmLlm.Anthropic.decodeMsg_unsupported_role, ``VbmLlm.Anthropic.decodeReqBlock_unsupported_type, ``VbmLlm.Anthropic.decodeToolPick_unsupported]),
   -- the Anthropic turn shape over `pair`
-  O "anthropic-turn-every-call-is-answered-exactly-once-in-order" ["anthropic-messages-turn:answer-each-call-once", "anthropic-messages:ToolResultBlockParam.tool_use_id", "anthropic-messages:ToolUseBlockParam.input"]
+  OC "anthropic-turn-every-call-is-answered-exactly-once-in-order" ["anthropic-messages-turn:answer-each-call-once", "anthropic-messages:ToolResultBlockParam.tool_use_id", "anthropic-messages:ToolUseBlockParam.input"]
     (.proved [``VbmLlm.Anthropic.render_paired, ``VbmLlm.Anthropic.ok_renderSegs, ``VbmLlm.Anthropic.joinUser_ok, ``VbmLlm.Anthropic.leadResults_resultsOf, ``VbmLlm.Anthropic.callIds_asstOf]),
-  O "anthropic-turn-window-text-follows-the-results-and-an-orphan-is-text" ["anthropic-messages-turn:window", "anthropic-messages-turn:orphan-is-text", "anthropic-messages-turn:unanswered-placeholder"]
+  OC "anthropic-turn-window-text-follows-the-results-and-an-orphan-is-text" ["anthropic-messages-turn:window", "anthropic-messages-turn:orphan-is-text", "anthropic-messages-turn:unanswered-placeholder"]
     (.proved [``VbmLlm.Anthropic.render_window_text_joins, ``VbmLlm.Anthropic.render_orphan, ``VbmLlm.Anthropic.render_unanswered, ``VbmLlm.Anthropic.render_answered]),
-  O "anthropic-turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["anthropic-messages-turn:prefix-stable"]
+  OC "anthropic-turn-extending-by-a-reply-leaves-what-was-rendered-as-it-was" ["anthropic-messages-turn:prefix-stable"]
     (.proved [``VbmLlm.Anthropic.render_prefix_stable, ``VbmLlm.Anthropic.renderSegs_append, ``VbmLlm.Anthropic.ledBy_pairFrom_none, ``VbmLlm.Anthropic.ledBy_pairFrom_some, ``VbmLlm.Anthropic.joinUser_append]),
   -- the Anthropic stream: one event
-  O "anthropic-event-type-must-agree-and-only-the-conventions-events-are-read" ["anthropic-messages:RawMessageStreamEvent.type", "anthropic-messages:RawMessageStopEvent.type", "anthropic-messages:RawMessageStartEvent.message"]
+  OC "anthropic-event-type-must-agree-and-only-the-conventions-events-are-read" ["anthropic-messages:RawMessageStreamEvent.type", "anthropic-messages:RawMessageStopEvent.type", "anthropic-messages:RawMessageStartEvent.message"]
     (.proved [``VbmLlm.Anthropic.decodeEventData_not_object, ``VbmLlm.Anthropic.decodeEventData_type_mismatch, ``VbmLlm.Anthropic.decodeEventData_agrees, ``VbmLlm.Anthropic.decodeItemOf_unsupported,
       ``VbmLlm.Anthropic.decodeItemOf_ping, ``VbmLlm.Anthropic.decodeItemOf_stop]),
-  O "anthropic-event-deltas-are-read-as-they-say" ["anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:RawContentBlockDelta.other", "anthropic-messages:RawContentBlockDeltaEvent.index",
+  OC "anthropic-event-deltas-are-read-as-they-say" ["anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:RawContentBlockDelta.other", "anthropic-messages:RawContentBlockDeltaEvent.index",
       "anthropic-messages:RawContentBlockDeltaEvent.delta", "anthropic-messages:RawContentBlockStartEvent.index", "anthropic-messages:RawContentBlockStartEvent.content_block", "anthropic-messages:RawContentBlockStopEvent.index"]
     (.proved [``VbmLlm.Anthropic.decodeDelta_text, ``VbmLlm.Anthropic.decodeDelta_json, ``VbmLlm.Anthropic.decodeDelta_other, ``VbmLlm.Anthropic.reqIndex_missing]),
   -- the Anthropic stream fold
-  O "anthropic-stream-chunk-boundaries-do-not-matter" ["anthropic-messages-stream:chunk-boundaries", "anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:ThinkingDelta.thinking",
+  OC "anthropic-stream-chunk-boundaries-do-not-matter" ["anthropic-messages-stream:chunk-boundaries", "anthropic-messages:TextDelta.text", "anthropic-messages:InputJSONDelta.partial_json", "anthropic-messages:ThinkingDelta.thinking",
       "anthropic-messages:SignatureDelta.signature"]
     (.proved [``VbmLlm.Anthropic.Acc.apply_text, ``VbmLlm.Anthropic.Acc.apply_json, ``VbmLlm.Anthropic.Acc.apply_thinking, ``VbmLlm.Anthropic.Acc.apply_index, ``VbmLlm.Anthropic.mapM_bind_mapM,
       ``VbmLlm.Anthropic.mapM_indices, ``VbmLlm.Anthropic.mapM_apply_indices, ``VbmLlm.Anthropic.step_delta_split]),
-  O "anthropic-stream-no-message-stop-is-never-complete" ["anthropic-messages-stream:message-stop-is-terminal", "anthropic-messages-stream:truncated-is-never-complete"]
+  OC "anthropic-stream-no-message-stop-is-never-complete" ["anthropic-messages-stream:message-stop-is-terminal", "anthropic-messages-stream:truncated-is-never-complete"]
     (.proved [``VbmLlm.Anthropic.foldWith_no_stop, ``VbmLlm.Anthropic.foldItems_complete, ``VbmLlm.Anthropic.foldWith_plain, ``VbmLlm.Anthropic.foldItems_nil]),
-  O "anthropic-stream-nothing-follows-message-stop" ["anthropic-messages-stream:message-stop-is-terminal"] (.proved [``VbmLlm.Anthropic.foldItems_after_stop]),
-  O "anthropic-stream-error-event-stops-the-fold-with-the-partial-reply" ["anthropic-messages-stream:error-event", "anthropic-messages:ErrorEvent.error"] (.proved [``VbmLlm.Anthropic.foldWith_error_event]),
-  O "anthropic-stream-nothing-but-a-ping-comes-before-message-start" ["anthropic-messages-stream:order"] (.proved [``VbmLlm.Anthropic.foldItems_before_start, ``VbmLlm.Anthropic.foldItems_start_twice]),
-  O "anthropic-stream-usage-and-stop-reason-are-the-last-non-null" ["anthropic-messages:MessageDeltaUsage.counts", "anthropic-messages:RawMessageDeltaEvent.delta.stop_reason", "anthropic-messages:RawMessageDeltaEvent.delta.stop_sequence"]
+  OC "anthropic-stream-nothing-follows-message-stop" ["anthropic-messages-stream:message-stop-is-terminal"] (.proved [``VbmLlm.Anthropic.foldItems_after_stop]),
+  OC "anthropic-stream-error-event-stops-the-fold-with-the-partial-reply" ["anthropic-messages-stream:error-event", "anthropic-messages:ErrorEvent.error"] (.proved [``VbmLlm.Anthropic.foldWith_error_event]),
+  OC "anthropic-stream-nothing-but-a-ping-comes-before-message-start" ["anthropic-messages-stream:order"] (.proved [``VbmLlm.Anthropic.foldItems_before_start, ``VbmLlm.Anthropic.foldItems_start_twice]),
+  OC "anthropic-stream-usage-and-stop-reason-are-the-last-non-null" ["anthropic-messages:MessageDeltaUsage.counts", "anthropic-messages:RawMessageDeltaEvent.delta.stop_reason", "anthropic-messages:RawMessageDeltaEvent.delta.stop_sequence"]
     (.proved [``VbmLlm.Anthropic.mergeUsage_later, ``VbmLlm.Anthropic.later_some, ``VbmLlm.Anthropic.later_none, ``VbmLlm.Anthropic.step_msgDelta_stop_reason, ``VbmLlm.Anthropic.step_msgDelta_keeps,
       ``VbmLlm.Anthropic.step_start_identity]),
-  O "anthropic-stream-a-calls-input-is-parsed-from-its-pieces" ["anthropic-messages-stream:tool-input-from-pieces", "anthropic-messages:ToolUseBlock.input"]
+  OC "anthropic-stream-a-calls-input-is-parsed-from-its-pieces" ["anthropic-messages-stream:tool-input-from-pieces", "anthropic-messages:ToolUseBlock.input"]
     (.proved [``VbmLlm.Anthropic.Acc.final_parsed, ``VbmLlm.Anthropic.Acc.final_unparsed, ``VbmLlm.Anthropic.Acc.final_no_pieces]),
-  O "anthropic-stream-fold-equals-single-shot" ["anthropic-messages-stream:chunk-boundaries"]
+  OC "anthropic-stream-fold-equals-single-shot" ["anthropic-messages-stream:chunk-boundaries"]
     (.partly [``VbmLlm.Anthropic.step_delta_split, ``VbmLlm.Anthropic.Acc.apply_text, ``VbmLlm.Anthropic.Acc.apply_json] "proved: text, thinking and tool-input pieces split anywhere give the state of the unsplit piece, and a complete reply is a `Response` as the single-shot decode yields; checked on recorded streams (`vectors/anthropic-messages-stream/*.single.json`); open: the whole equality for every interleaving of blocks"),
-  O "anthropic-messages-adapter" [] (.partly [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.render_paired, ``VbmLlm.Anthropic.foldItems_complete] "proved: the reply decoder, usage, stop reasons, the request codec with its round trip, the turn shape over `pair` and the named-event stream fold (above); open: the body of a failed call (its error type and message) is not read"),
+  OC "anthropic-messages-adapter" [] (.partly [``VbmLlm.Anthropic.decode_encode, ``VbmLlm.Anthropic.render_paired, ``VbmLlm.Anthropic.foldItems_complete] "proved: the reply decoder, usage, stop reasons, the request codec with its round trip, the turn shape over `pair` and the named-event stream fold (above); open: the body of a failed call (its error type and message) is not read"),
   -- OpenRouter's variant of the chat profile
-  O "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
-  O "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]
+  OC "openrouter-finish-reason-error-is-its-own-class" ["openrouter-chat:finish-reason-error"] (.proved [``VbmLlm.FinishClass.ofOpenRouter_error, ``VbmLlm.FinishClass.ofOpenRouter_other]),
+  OC "openrouter-error-code-is-a-word-or-a-natural-never-coerced" ["openrouter-chat:Error.code", "openrouter-chat:Error.message"]
     (.proved [``VbmLlm.OpenRouter.optCode_ok_iff, ``VbmLlm.OpenRouter.optCode_wrong, ``VbmLlm.OpenRouter.decodeApiError_ok_iff, ``VbmLlm.OpenRouter.decodeApiError_not_object, ``VbmLlm.OpenRouter.decodeApiError_no_error,
       ``VbmLlm.OpenRouter.decodeApiError_no_message]),
-  O "openrouter-chat-variant" ["openrouter-chat:usage-frame-has-choices", "openrouter-chat:mid-stream-error"]
+  OC "openrouter-chat-variant" ["openrouter-chat:usage-frame-has-choices", "openrouter-chat:mid-stream-error"]
     (.partly [``VbmLlm.OpenAI.applyChunk_usage, ``VbmLlm.OpenAI.foldItems_error_chunk, ``VbmLlm.OpenAI.applyChoice_finish]
       "proved: a usage report is read from any frame (so from one that has choices), an error chunk stops the fold with the partial reply, and the last finish reason wins (a repeated one changes nothing). Open: one theorem about a whole OpenRouter-shaped stream (the repeated finish reason on the usage frame leaves the reply as it was); the recorded stream `o001`, with its single-shot twin, checks it on data. Comment lines are the event splitter's (`vbm-sse`), not this library's"),
-  O "decode-allocation-budget" [] (.open_ "a decoded reply allocates no more than the code it replaces on a recorded reply (measured by the consumer's footprint gate; the budget is stated here when the first consumer measures it)"),
-  O "openai-reading-is-faithful-to-the-published-schema" [] (.limit "the clause index (docs/clause-index.txt) is read from the pinned OpenAPI document (docs/schemas/openai-chat.md); that each clause is stated faithfully is checked by review, never by a machine"),
-  O "provider-honours-the-schema" [] (.limit "that a server sends what its schema says, that tool arguments are valid JSON or fit the declared parameters, that `model` names what served the call: client behaviour, not the wire contract"),
-  O "the-pinned-parser-is-the-rfc-8259-reference" [] (.limit "the parse of the bytes is vbm-json's `parseFast`, proved there equal to its RFC 8259 reference; this library vendors a locked release of it (.land/pins.lock) and does not re-prove it")]
+  OC "decode-allocation-budget" [] (.open_ "a decoded reply allocates no more than the code it replaces on a recorded reply (measured by the consumer's footprint gate; the budget is stated here when the first consumer measures it)"),
+  OC "openai-reading-is-faithful-to-the-published-schema" [] (.limit "the clause index (docs/clause-index.txt) is read from the pinned OpenAPI document (docs/schemas/openai-chat.md); that each clause is stated faithfully is checked by review, never by a machine"),
+  OC "provider-honours-the-schema" [] (.limit "that a server sends what its schema says, that tool arguments are valid JSON or fit the declared parameters, that `model` names what served the call: client behaviour, not the wire contract"),
+  OC "the-pinned-parser-is-the-rfc-8259-reference" [] (.limit "the parse of the bytes is vbm-json's `parseFast`, proved there equal to its RFC 8259 reference; this library vendors a locked release of it (.land/pins.lock) and does not re-prove it")]

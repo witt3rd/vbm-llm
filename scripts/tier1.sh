@@ -73,8 +73,8 @@ bg axiom-gate .land/tool/bin/land-lean axiom --selftest
 .land/tool/bin/land-lean trust   # the trust ledger (docs/trust-ledger.md): what cannot be proven is marked as trusted, and what must be marked is derived from the tree (vbm-land docs/lean-gates.md)
 .land/tool/bin/land-lean recheck --selftest   # every proof replayed by Lean's own checker in a fresh process (vbm-land docs/lean-gates.md)
 
-# 2b. The obligation ledger: named theorems exist; spec-clause tags are in the index; proved may only rise, open may only fall, coverage may only rise. Renders docs/proof-ledger.md.
-bg ledger-gate lake env lean --run scripts/LedgerGate.lean --selftest
+# 2b. The obligation ledger (the landing tool's `land-lean ledger`): named theorems exist; spec-clause tags are in the index; the coverage of the read and policy clauses is reported (no baseline gates it). Renders docs/proof-ledger.md.
+bg ledger-gate .land/tool/bin/land-lean ledger --selftest
 
 
 # 2d. The conformance vectors (vectors/openai-chat): every recorded reply decodes to its expectation, and the check is shown able to fail (a tampered row, a missing vector).

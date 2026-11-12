@@ -1,3 +1,4 @@
+# Format: one clause per line, `convention:clause-id disposition notes` (the disposition is `read`, `policy` or `ignored`). The first word is the tag a claim of the obligation ledger cites (`land-lean ledger`); the read and policy clauses are the ones whose coverage is reported.
 # The clause index (`openai-chat` is the OpenAPI document pinned in docs/schemas/openai-chat.md; `openai-chat-sse` is the stream framing, which that document does not specify: it is taken from the vendor's streaming description and OpenRouter's documented examples, always `policy`): the parts of each pinned convention (docs/schemas/) that this library reads, decides by policy, or deliberately ignores. DATA, extracted from the pinned schema by reading it.
 # `openai-chat-turn` is the pairing of tool results with tool calls (docs/schemas/openai-chat.md, the turn section): the schema gives the message shapes, the sequence rule is stated by the vendor's function-calling guide in prose, so every clause is `policy`.
 # `openai-chat-status` is the class of the status of a failed call (VbmLlm.ErrorClass.ofStatus): the schema does not give it, the HTTP status codes' meaning is the standard's and the vendors' error pages, so every clause is `policy`.
@@ -9,214 +10,214 @@
 # `read`: the library decodes it as the schema says. `policy`: the library decides something the schema leaves open (stated in the clause text). `ignored`: present in the schema, not read.
 # The obligation ledger (VbmLlmProofs/Ledger.lean) tags a claim with `convention:clause-id`; the ledger gate fails on a tag that is not in this index, and reports the share of read and policy clauses
 # that a proved or partial claim tags (a coverage of traceability, never a statement that the clause was stated faithfully).
-openai-chat CreateChatCompletionResponse.id policy string; read when present, not required (compatible servers omit it)
-openai-chat CreateChatCompletionResponse.model policy string, an opaque name; read when present, not required
-openai-chat CreateChatCompletionResponse.choices policy array of choices (the schema requires the array; the library also requires it to be non-empty: there is nothing to read in none)
-openai-chat CreateChatCompletionResponse.usage read CompletionUsage; absent or null is no report
-openai-chat CreateChatCompletionResponse.choices.index policy integer; read when present, not required
-openai-chat CreateChatCompletionResponse.choices.message read the assistant message; required
-openai-chat CreateChatCompletionResponse.choices.finish_reason policy kept as the provider's text (stop, length, tool_calls, content_filter, function_call listed by the schema; any other word is kept and classed unknown); null or absent is none
-openai-chat ChatCompletionResponseMessage.content read string or null
-openai-chat ChatCompletionResponseMessage.refusal read string or null
-openai-chat ChatCompletionResponseMessage.tool_calls read array of tool calls; absent or null is none
-openai-chat ChatCompletionMessageToolCall.id read string; required
-openai-chat ChatCompletionMessageToolCall.type policy the schema lists only `function`: absent or `function` is read, any other word is refused as unsupported
-openai-chat ChatCompletionMessageToolCall.function.name read string; required
-openai-chat ChatCompletionMessageToolCall.function.arguments read string, kept verbatim: JSON text the model may have got wrong, never parsed here
-openai-chat CompletionUsage.prompt_tokens read natural; includes the cached tokens
-openai-chat CompletionUsage.completion_tokens read natural; includes the reasoning tokens
-openai-chat CompletionUsage.total_tokens read natural
-openai-chat CompletionUsage.prompt_tokens_details.cached_tokens read natural, a part of prompt_tokens
-openai-chat CompletionUsage.completion_tokens_details.reasoning_tokens read natural, a part of completion_tokens
-openai-chat CreateChatCompletionStreamResponse.id policy string; the first one seen wins, none required
-openai-chat CreateChatCompletionStreamResponse.model policy string, an opaque name; the first one seen wins, none required
-openai-chat CreateChatCompletionStreamResponse.choices policy array; absent, null or empty is no choice (the usage frame of stream_options.include_usage has none)
-openai-chat CreateChatCompletionStreamResponse.usage read CompletionUsage or null; the last non-null one wins
-openai-chat CreateChatCompletionStreamResponse.choices.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; choices are keyed by it
-openai-chat CreateChatCompletionStreamResponse.choices.delta policy the delta object; absent or null reads as an empty delta
-openai-chat CreateChatCompletionStreamResponse.choices.finish_reason read string or null; the last non-null one wins
-openai-chat ChatCompletionStreamResponseDelta.content read string or null; pieces concatenate in order
-openai-chat ChatCompletionStreamResponseDelta.refusal read string or null; pieces concatenate in order
-openai-chat ChatCompletionStreamResponseDelta.tool_calls read array of tool-call fragments; absent or null is none
-openai-chat ChatCompletionMessageToolCallChunk.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; fragments merge by it
-openai-chat ChatCompletionMessageToolCallChunk.id read string; the first one seen wins
-openai-chat ChatCompletionMessageToolCallChunk.type policy absent or `function`, any other word refused as unsupported
-openai-chat ChatCompletionMessageToolCallChunk.function.name read string; the first one seen wins (not concatenated)
-openai-chat ChatCompletionMessageToolCallChunk.function.arguments read string pieces; concatenated in order, kept verbatim
-openai-chat-sse sentinel policy the data `[DONE]` ends a stream and nothing may follow it; a stream that ends with no sentinel is a truncated outcome, never a complete reply
-openai-chat-sse event-type policy the convention names no event type: an event with a type other than the default is refused; an event with empty data is ignored
-openai-chat-sse error-chunk policy a chunk with an `error` member ends the fold with its message and the partial reply (the harness decides whether to discard what was received)
-openai-chat-sse complete-has-identity policy a completed stream has a choice, and every completed tool call has an id and a name
-openai-chat CreateChatCompletionResponse.created ignored integer timestamp
-openai-chat CreateChatCompletionResponse.object ignored the constant chat.completion
-openai-chat CreateChatCompletionResponse.service_tier ignored
-openai-chat CreateChatCompletionResponse.system_fingerprint ignored
-openai-chat CreateChatCompletionResponse.choices.logprobs ignored
-openai-chat ChatCompletionResponseMessage.role ignored the constant assistant
-openai-chat ChatCompletionResponseMessage.annotations ignored
-openai-chat ChatCompletionResponseMessage.function_call ignored deprecated, replaced by tool_calls
-openai-chat ChatCompletionResponseMessage.audio ignored
-openai-chat CreateChatCompletionRequest.model policy string, an opaque name; required by the schema and written always, never looked at
-openai-chat CreateChatCompletionRequest.messages read array of messages; required, at least one (the schema's minItems)
-openai-chat ChatCompletionRequestSystemMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
-openai-chat ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
-openai-chat ChatCompletionRequestUserMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts (an image, audio or file part, or two text parts) is not modelled and is refused
-openai-chat ChatCompletionRequestAssistantMessage.content policy string, written when present, or the one-part marked text array of `cache-marker` when a caller marks the message; when the turn is only tool calls it is written as null (some providers refuse the member left out) and cannot carry a marker (there is no content part to carry it); with no text and no calls it is left out
-openai-chat ChatCompletionRequestAssistantMessage.tool_calls read the calls as the provider sent them (id, `function` type, name, arguments verbatim); left out when there are none
-openai-chat ChatCompletionRequestToolMessage.tool_call_id read string; the id of the call this message answers
-openai-chat ChatCompletionRequestToolMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`
-openai-chat CreateChatCompletionRequest.tools policy array of tools; left out when empty (a server may refuse an empty array)
-openai-chat cache-marker policy one message of `messages` may carry its `content` as the one-part text array `[{"type": "text", "text": <the text>, "cache_control": {"type": "ephemeral"}}]`: a hint that the provider may cache the prompt prefix up to it (some providers cache a prefix only when such a marker is present, and read the whole previous prefix back from the cache on the next call). The encoder writes it only when a caller names the message (`Request.encodeWith`), writes it for a marked message only, writes nothing when the named message has no text or the index names none (a hint is dropped, never refused, and never moved elsewhere), and at most one message of a request carries it; the decoder reads back exactly that one-part shape (any other array is refused, never dropped) `cache_control` is not a member of the pinned document's content parts, so this shape is not the document's: it is the one the providers that need the marker accept, stated here as policy and checked by the vectors
+openai-chat:CreateChatCompletionResponse.id policy string; read when present, not required (compatible servers omit it)
+openai-chat:CreateChatCompletionResponse.model policy string, an opaque name; read when present, not required
+openai-chat:CreateChatCompletionResponse.choices policy array of choices (the schema requires the array; the library also requires it to be non-empty: there is nothing to read in none)
+openai-chat:CreateChatCompletionResponse.usage read CompletionUsage; absent or null is no report
+openai-chat:CreateChatCompletionResponse.choices.index policy integer; read when present, not required
+openai-chat:CreateChatCompletionResponse.choices.message read the assistant message; required
+openai-chat:CreateChatCompletionResponse.choices.finish_reason policy kept as the provider's text (stop, length, tool_calls, content_filter, function_call listed by the schema; any other word is kept and classed unknown); null or absent is none
+openai-chat:ChatCompletionResponseMessage.content read string or null
+openai-chat:ChatCompletionResponseMessage.refusal read string or null
+openai-chat:ChatCompletionResponseMessage.tool_calls read array of tool calls; absent or null is none
+openai-chat:ChatCompletionMessageToolCall.id read string; required
+openai-chat:ChatCompletionMessageToolCall.type policy the schema lists only `function`: absent or `function` is read, any other word is refused as unsupported
+openai-chat:ChatCompletionMessageToolCall.function.name read string; required
+openai-chat:ChatCompletionMessageToolCall.function.arguments read string, kept verbatim: JSON text the model may have got wrong, never parsed here
+openai-chat:CompletionUsage.prompt_tokens read natural; includes the cached tokens
+openai-chat:CompletionUsage.completion_tokens read natural; includes the reasoning tokens
+openai-chat:CompletionUsage.total_tokens read natural
+openai-chat:CompletionUsage.prompt_tokens_details.cached_tokens read natural, a part of prompt_tokens
+openai-chat:CompletionUsage.completion_tokens_details.reasoning_tokens read natural, a part of completion_tokens
+openai-chat:CreateChatCompletionStreamResponse.id policy string; the first one seen wins, none required
+openai-chat:CreateChatCompletionStreamResponse.model policy string, an opaque name; the first one seen wins, none required
+openai-chat:CreateChatCompletionStreamResponse.choices policy array; absent, null or empty is no choice (the usage frame of stream_options.include_usage has none)
+openai-chat:CreateChatCompletionStreamResponse.usage read CompletionUsage or null; the last non-null one wins
+openai-chat:CreateChatCompletionStreamResponse.choices.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; choices are keyed by it
+openai-chat:CreateChatCompletionStreamResponse.choices.delta policy the delta object; absent or null reads as an empty delta
+openai-chat:CreateChatCompletionStreamResponse.choices.finish_reason read string or null; the last non-null one wins
+openai-chat:ChatCompletionStreamResponseDelta.content read string or null; pieces concatenate in order
+openai-chat:ChatCompletionStreamResponseDelta.refusal read string or null; pieces concatenate in order
+openai-chat:ChatCompletionStreamResponseDelta.tool_calls read array of tool-call fragments; absent or null is none
+openai-chat:ChatCompletionMessageToolCallChunk.index policy integer, required by the schema: a missing one is refused unless the policy reads it as 0; fragments merge by it
+openai-chat:ChatCompletionMessageToolCallChunk.id read string; the first one seen wins
+openai-chat:ChatCompletionMessageToolCallChunk.type policy absent or `function`, any other word refused as unsupported
+openai-chat:ChatCompletionMessageToolCallChunk.function.name read string; the first one seen wins (not concatenated)
+openai-chat:ChatCompletionMessageToolCallChunk.function.arguments read string pieces; concatenated in order, kept verbatim
+openai-chat-sse:sentinel policy the data `[DONE]` ends a stream and nothing may follow it; a stream that ends with no sentinel is a truncated outcome, never a complete reply
+openai-chat-sse:event-type policy the convention names no event type: an event with a type other than the default is refused; an event with empty data is ignored
+openai-chat-sse:error-chunk policy a chunk with an `error` member ends the fold with its message and the partial reply (the harness decides whether to discard what was received)
+openai-chat-sse:complete-has-identity policy a completed stream has a choice, and every completed tool call has an id and a name
+openai-chat:CreateChatCompletionResponse.created ignored integer timestamp
+openai-chat:CreateChatCompletionResponse.object ignored the constant chat.completion
+openai-chat:CreateChatCompletionResponse.service_tier ignored
+openai-chat:CreateChatCompletionResponse.system_fingerprint ignored
+openai-chat:CreateChatCompletionResponse.choices.logprobs ignored
+openai-chat:ChatCompletionResponseMessage.role ignored the constant assistant
+openai-chat:ChatCompletionResponseMessage.annotations ignored
+openai-chat:ChatCompletionResponseMessage.function_call ignored deprecated, replaced by tool_calls
+openai-chat:ChatCompletionResponseMessage.audio ignored
+openai-chat:CreateChatCompletionRequest.model policy string, an opaque name; required by the schema and written always, never looked at
+openai-chat:CreateChatCompletionRequest.messages read array of messages; required, at least one (the schema's minItems)
+openai-chat:ChatCompletionRequestSystemMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
+openai-chat:ChatCompletionRequestDeveloperMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts is not modelled and is refused
+openai-chat:ChatCompletionRequestUserMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`; any other array of parts (an image, audio or file part, or two text parts) is not modelled and is refused
+openai-chat:ChatCompletionRequestAssistantMessage.content policy string, written when present, or the one-part marked text array of `cache-marker` when a caller marks the message; when the turn is only tool calls it is written as null (some providers refuse the member left out) and cannot carry a marker (there is no content part to carry it); with no text and no calls it is left out
+openai-chat:ChatCompletionRequestAssistantMessage.tool_calls read the calls as the provider sent them (id, `function` type, name, arguments verbatim); left out when there are none
+openai-chat:ChatCompletionRequestToolMessage.tool_call_id read string; the id of the call this message answers
+openai-chat:ChatCompletionRequestToolMessage.content policy text only: the string form of `content`, or (when a caller marks the message) the one-part marked text array of `cache-marker`
+openai-chat:CreateChatCompletionRequest.tools policy array of tools; left out when empty (a server may refuse an empty array)
+openai-chat:cache-marker policy one message of `messages` may carry its `content` as the one-part text array `[{"type": "text", "text": <the text>, "cache_control": {"type": "ephemeral"}}]`: a hint that the provider may cache the prompt prefix up to it (some providers cache a prefix only when such a marker is present, and read the whole previous prefix back from the cache on the next call). The encoder writes it only when a caller names the message (`Request.encodeWith`), writes it for a marked message only, writes nothing when the named message has no text or the index names none (a hint is dropped, never refused, and never moved elsewhere), and at most one message of a request carries it; the decoder reads back exactly that one-part shape (any other array is refused, never dropped) `cache_control` is not a member of the pinned document's content parts, so this shape is not the document's: it is the one the providers that need the marker accept, stated here as policy and checked by the vectors
 
-openai-chat ChatCompletionTool.type read always `function`, the only value the schema lists
-openai-chat FunctionObject.name read string; required
-openai-chat FunctionObject.description read string; left out when absent
-openai-chat FunctionObject.parameters policy the members of the JSON Schema object, as the caller wrote them (never inspected); left out when absent
-openai-chat FunctionObject.strict read boolean; left out when absent
-openai-chat CreateChatCompletionRequest.tool_choice read `none`, `auto`, `required` or a named function; left out when absent
-openai-chat ChatCompletionNamedToolChoice.function.name read string; required (an absent `type` is read as `function`, any other word is refused)
-openai-chat CreateChatCompletionRequest.parallel_tool_calls read boolean; left out when absent
-openai-chat CreateChatCompletionRequest.stream read boolean; left out when absent
-openai-chat ChatCompletionStreamOptions.include_usage read boolean, the member of `stream_options`; `stream_options` is left out when it is absent
-openai-chat CreateChatCompletionRequest.max_completion_tokens read a plain natural; left out when absent
-openai-chat CreateChatCompletionRequest.max_tokens read a plain natural (deprecated by the schema, still the member compatible servers read); left out when absent
-openai-chat CreateChatCompletionRequest.temperature policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
-openai-chat CreateChatCompletionRequest.top_p policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
-openai-chat CreateChatCompletionRequest.modalities ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.reasoning_effort ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.frequency_penalty ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.presence_penalty ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.web_search_options ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.top_logprobs ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.response_format ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.audio ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.store ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.stop ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.logit_bias ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.logprobs ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.n ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.prediction ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.seed ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.function_call ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.functions ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.metadata ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.user ignored not modelled: not written, and refused by no decoder
-openai-chat CreateChatCompletionRequest.service_tier ignored not modelled: not written, and refused by no decoder
-openai-chat ChatCompletionRequestAssistantMessage.refusal ignored not modelled
-openai-chat ChatCompletionRequestAssistantMessage.name ignored not modelled
-openai-chat ChatCompletionRequestAssistantMessage.audio ignored not modelled
-openai-chat ChatCompletionRequestAssistantMessage.function_call ignored not modelled
-openai-chat ChatCompletionRequestFunctionMessage ignored not modelled
-openai-chat ChatCompletionRequestSystemMessage.name ignored not modelled
-openai-chat ChatCompletionRequestUserMessage.name ignored not modelled
-openai-chat-turn window policy the window of a turn is the entries after it up to the next assistant entry (a text or another turn); only a result in the window can answer one of its calls
-openai-chat-turn answer-each-call-once policy every call of a turn is answered exactly once, in call order, directly after the assistant message, by a `tool` message carrying the call's id
-openai-chat-turn newest-result-wins policy of several results recorded for one call id in the window, the newest is the answer
-openai-chat-turn unanswered-placeholder policy a call with no result in its window is shown with a placeholder text (the consumer's policy), so the request is well formed
-openai-chat-turn orphan-is-text policy a result that answers no call of the turn it sits in is shown as plain user text (the consumer's policy), never as a `tool` message
-openai-chat-turn text-keeps-its-order policy the other entries of a window are kept in order, after the turn's tool messages
-openai-chat-turn prefix-stable policy extending the conversation by an assistant entry leaves every earlier message as it was, byte for byte (cache coherence)
-openai-chat ErrorResponse.error read the object of a failed call's body; required
-openai-chat Error.message read string; required
-openai-chat Error.type read string, kept as the provider's word; read when present
-openai-chat Error.param read string or null; read when present
-openai-chat Error.code read string or null (a numeric code of a compatible server is refused, not coerced); read when present
-openai-chat-status auth policy 401 and 403 are the credentials
-openai-chat-status quota policy 402 is the quota or the balance
-openai-chat-status timeout policy 408 is a timeout
-openai-chat-status rate-limit policy 429 is the rate limit
-openai-chat-status server policy a server error (500 and above) is an overloaded provider, except 525 and 526 (the TLS statuses), which are invalid
-openai-chat-status overflow policy a client error is an overflow only on the consumer's verdict on the message, and never when the status names a class of its own; any other client error is invalid
-anthropic-messages Message.id policy string; read when present, not required
-anthropic-messages Message.model policy string, an opaque name; read when present, not required
-anthropic-messages Message.content read array of content blocks; required, may be empty
-anthropic-messages Message.stop_reason policy kept as the provider's text (the seven listed words; any other word is kept and classed unknown); null or absent is none
-anthropic-messages Message.stop_sequence policy string or null; read when present
-anthropic-messages Message.usage read Usage; absent or null is no report
-anthropic-messages TextBlock.text read string; required
-anthropic-messages ToolUseBlock.id read string; required
-anthropic-messages ToolUseBlock.name read string; required
-anthropic-messages ToolUseBlock.input policy any JSON value that is not null, kept as the value (never printed to text or parsed further here); required
-anthropic-messages ThinkingBlock.thinking read string; required
-anthropic-messages ThinkingBlock.signature read string; required
-anthropic-messages RedactedThinkingBlock.data read string; required
-anthropic-messages ContentBlock.other policy a block whose type is not text, thinking, redacted_thinking or tool_use is kept raw, never dropped
-anthropic-messages Usage.input_tokens read natural; excludes the cache reads and writes
-anthropic-messages Usage.output_tokens read natural
-anthropic-messages Usage.cache_read_input_tokens read natural; a count of its own, not a part of input_tokens
-anthropic-messages Usage.cache_creation_input_tokens read natural; a count of its own, not a part of input_tokens
-anthropic-messages Message.container ignored
-anthropic-messages Message.diagnostics ignored
-anthropic-messages Message.role ignored the constant assistant
-anthropic-messages Message.stop_details ignored
-anthropic-messages Message.type ignored the constant message
-anthropic-messages TextBlock.citations ignored
-anthropic-messages ToolUseBlock.caller ignored
-anthropic-messages Usage.cache_creation ignored the breakdown by cache lifetime
-anthropic-messages Usage.service_tier ignored
-anthropic-messages Usage.server_tool_use ignored
-anthropic-messages MessageCreateParams.model policy string, an opaque name; required
-anthropic-messages MessageCreateParams.max_tokens read natural; required, written as a plain natural
-anthropic-messages MessageCreateParams.messages read array of messages; required
-anthropic-messages MessageCreateParams.system policy a string (the array of text blocks form is not modelled); left out when absent
-anthropic-messages MessageCreateParams.tools read array of tools; an empty list is left out
-anthropic-messages MessageCreateParams.tool_choice read auto, any, none or a named tool, each with the parallel-use flag where the schema has it
-anthropic-messages MessageCreateParams.stream read boolean; left out when absent
-anthropic-messages MessageCreateParams.temperature read number lexeme; left out when absent
-anthropic-messages MessageCreateParams.top_p read number lexeme; left out when absent
-anthropic-messages MessageCreateParams.top_k read natural; left out when absent
-anthropic-messages MessageCreateParams.stop_sequences read array of strings; an empty list is left out
-anthropic-messages MessageParam.role read user or assistant
-anthropic-messages MessageParam.content policy an array of blocks (a bare string is read as one text block; image and document blocks are not modelled and are refused)
-anthropic-messages ToolUseBlockParam.input policy the members of an object, written verbatim
-anthropic-messages ToolResultBlockParam.tool_use_id read string; required
-anthropic-messages ToolResultBlockParam.content policy a string (the array form is not modelled); left out when absent
-anthropic-messages ToolResultBlockParam.is_error read boolean; left out when absent
-anthropic-messages Tool.name read string; required
-anthropic-messages Tool.description read string; left out when absent
-anthropic-messages Tool.input_schema read the members of a JSON Schema object; required
-anthropic-messages Tool.strict read boolean; left out when absent
-anthropic-messages MessageCreateParamsBase.cache_control ignored
-anthropic-messages MessageCreateParamsBase.metadata ignored
-anthropic-messages MessageCreateParamsBase.output_config ignored
-anthropic-messages MessageCreateParamsBase.service_tier ignored
-anthropic-messages-turn answer-each-call-once policy every tool_use block is answered by one tool_result block, in call order, among the first blocks of the user message directly after the assistant message that made the call (the vendor's tool-use guide states this in prose)
-anthropic-messages-turn window policy the user text of a turn's window (text and orphan results, shown as text) follows the results in the same message; the window ends at the next assistant item or turn
-anthropic-messages-turn unanswered-placeholder policy a call with no recorded result is shown with the consumer's placeholder text
-anthropic-messages-turn orphan-is-text policy a result with no turn open in front of it is shown as user text, never as a tool_result block
-anthropic-messages-turn prefix-stable policy extending a conversation by an assistant item leaves the messages already rendered as they were; assistant messages are never joined
-anthropic-messages RawMessageStreamEvent.type policy the data's type names the event; the stream's own event type, when named, must equal it; a type outside the eight events is refused
-anthropic-messages RawMessageStartEvent.message read the message: its id, model and the usage known at the start; its (empty) content is not read
-anthropic-messages RawContentBlockStartEvent.content_block read a block as the reply reads it (text, thinking, redacted_thinking, tool_use; another type is kept raw)
-anthropic-messages RawContentBlockStartEvent.index read natural; required, keys the block
-anthropic-messages RawContentBlockDeltaEvent.index read natural; required
-anthropic-messages RawContentBlockDeltaEvent.delta read the delta of the block
-anthropic-messages TextDelta.text read string; concatenated onto a text block
-anthropic-messages InputJSONDelta.partial_json read string, a piece of the call's input as JSON text; concatenated onto a tool_use block and parsed at message_stop
-anthropic-messages ThinkingDelta.thinking read string; concatenated onto a thinking block
-anthropic-messages SignatureDelta.signature read string; concatenated onto a thinking block's signature
-anthropic-messages RawContentBlockDelta.other policy a delta of another type (a citations delta) is read and kept out of the reply
-anthropic-messages RawContentBlockStopEvent.index read natural; required, the block must have started
-anthropic-messages RawMessageDeltaEvent.delta.stop_reason policy kept as the provider's text; the last non-null one wins
-anthropic-messages RawMessageDeltaEvent.delta.stop_sequence policy the last non-null one wins
-anthropic-messages MessageDeltaUsage.counts read naturals (output_tokens, input_tokens, the two cache counts); cumulative: each count is the last non-null one seen
-anthropic-messages RawMessageStopEvent.type policy the terminal event
-anthropic-messages ErrorEvent.error policy an error event stops the fold; its message is kept when it is a string
-anthropic-messages-stream message-stop-is-terminal policy the fold is complete only on message_stop as the last event, after message_start
-anthropic-messages-stream truncated-is-never-complete policy events that end with no message_stop are truncated, with the partial reply typed as partial
-anthropic-messages-stream error-event policy an error event stops the fold with its message and the partial reply
-anthropic-messages-stream order policy nothing but ping comes before message_start; a second message_start is refused
-anthropic-messages-stream chunk-boundaries policy deltas of a kind concatenate in order, so where a text or a call's input is split does not matter
-anthropic-messages-stream tool-input-from-pieces policy a call's input is the value its pieces parse to; none sent keeps the start's; pieces that do not parse refuse a complete reply and are kept as text in a partial one
-openrouter-chat usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
-openrouter-chat reasoning-text policy the model's reasoning text is a message's (or a delta's) `reasoning` member, else its `reasoning_content` alias, each a string when present; in a stream the pieces concatenate in order; `reasoning_details` is not read
-openrouter-chat provider policy the reply's (or chunk's) top-level `provider` string names the upstream that served the call; read when present, the first one seen wins in a stream
-openrouter-chat usage-cost read a JSON number: what the call cost, as the provider wrote it (a fraction and an exponent too, e.g. 1.68e-05); absent is no report (none), and a value that is not a number, or a number written with a minus sign, is refused, never coerced and never read as 0 (the test is the sign of the lexeme: a `-0` is zero and is refused for its sign, so the reading never claims a value is below zero). No unit, no conversion, never combined with the token counts
-openrouter-chat usage-cost-details ignored the nested breakdown of `usage.cost` (`cost_details`): not read
-openrouter-chat native-finish-reason ignored the provider's own finish word beside the normalized one: not read
-openrouter-chat finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)
-openrouter-chat mid-stream-error policy a chunk with a top-level `error` and finish reason `error` ends the stream with HTTP 200; the fold stops there with the message and the partial reply
-openrouter-chat comment-lines policy comment lines (`: OPENROUTER PROCESSING`) are not events: the event splitter's
-openrouter-chat Error.code policy a word or a plain natural (the HTTP status before the stream is committed), each read as itself, anything else refused
-openrouter-chat Error.message read string; required
+openai-chat:ChatCompletionTool.type read always `function`, the only value the schema lists
+openai-chat:FunctionObject.name read string; required
+openai-chat:FunctionObject.description read string; left out when absent
+openai-chat:FunctionObject.parameters policy the members of the JSON Schema object, as the caller wrote them (never inspected); left out when absent
+openai-chat:FunctionObject.strict read boolean; left out when absent
+openai-chat:CreateChatCompletionRequest.tool_choice read `none`, `auto`, `required` or a named function; left out when absent
+openai-chat:ChatCompletionNamedToolChoice.function.name read string; required (an absent `type` is read as `function`, any other word is refused)
+openai-chat:CreateChatCompletionRequest.parallel_tool_calls read boolean; left out when absent
+openai-chat:CreateChatCompletionRequest.stream read boolean; left out when absent
+openai-chat:ChatCompletionStreamOptions.include_usage read boolean, the member of `stream_options`; `stream_options` is left out when it is absent
+openai-chat:CreateChatCompletionRequest.max_completion_tokens read a plain natural; left out when absent
+openai-chat:CreateChatCompletionRequest.max_tokens read a plain natural (deprecated by the schema, still the member compatible servers read); left out when absent
+openai-chat:CreateChatCompletionRequest.temperature policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
+openai-chat:CreateChatCompletionRequest.top_p policy a number lexeme (no float), kept as the caller wrote it; the schema's range is the provider's to enforce
+openai-chat:CreateChatCompletionRequest.modalities ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.reasoning_effort ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.frequency_penalty ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.presence_penalty ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.web_search_options ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.top_logprobs ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.response_format ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.audio ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.store ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.stop ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.logit_bias ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.logprobs ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.n ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.prediction ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.seed ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.function_call ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.functions ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.metadata ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.user ignored not modelled: not written, and refused by no decoder
+openai-chat:CreateChatCompletionRequest.service_tier ignored not modelled: not written, and refused by no decoder
+openai-chat:ChatCompletionRequestAssistantMessage.refusal ignored not modelled
+openai-chat:ChatCompletionRequestAssistantMessage.name ignored not modelled
+openai-chat:ChatCompletionRequestAssistantMessage.audio ignored not modelled
+openai-chat:ChatCompletionRequestAssistantMessage.function_call ignored not modelled
+openai-chat:ChatCompletionRequestFunctionMessage ignored not modelled
+openai-chat:ChatCompletionRequestSystemMessage.name ignored not modelled
+openai-chat:ChatCompletionRequestUserMessage.name ignored not modelled
+openai-chat-turn:window policy the window of a turn is the entries after it up to the next assistant entry (a text or another turn); only a result in the window can answer one of its calls
+openai-chat-turn:answer-each-call-once policy every call of a turn is answered exactly once, in call order, directly after the assistant message, by a `tool` message carrying the call's id
+openai-chat-turn:newest-result-wins policy of several results recorded for one call id in the window, the newest is the answer
+openai-chat-turn:unanswered-placeholder policy a call with no result in its window is shown with a placeholder text (the consumer's policy), so the request is well formed
+openai-chat-turn:orphan-is-text policy a result that answers no call of the turn it sits in is shown as plain user text (the consumer's policy), never as a `tool` message
+openai-chat-turn:text-keeps-its-order policy the other entries of a window are kept in order, after the turn's tool messages
+openai-chat-turn:prefix-stable policy extending the conversation by an assistant entry leaves every earlier message as it was, byte for byte (cache coherence)
+openai-chat:ErrorResponse.error read the object of a failed call's body; required
+openai-chat:Error.message read string; required
+openai-chat:Error.type read string, kept as the provider's word; read when present
+openai-chat:Error.param read string or null; read when present
+openai-chat:Error.code read string or null (a numeric code of a compatible server is refused, not coerced); read when present
+openai-chat-status:auth policy 401 and 403 are the credentials
+openai-chat-status:quota policy 402 is the quota or the balance
+openai-chat-status:timeout policy 408 is a timeout
+openai-chat-status:rate-limit policy 429 is the rate limit
+openai-chat-status:server policy a server error (500 and above) is an overloaded provider, except 525 and 526 (the TLS statuses), which are invalid
+openai-chat-status:overflow policy a client error is an overflow only on the consumer's verdict on the message, and never when the status names a class of its own; any other client error is invalid
+anthropic-messages:Message.id policy string; read when present, not required
+anthropic-messages:Message.model policy string, an opaque name; read when present, not required
+anthropic-messages:Message.content read array of content blocks; required, may be empty
+anthropic-messages:Message.stop_reason policy kept as the provider's text (the seven listed words; any other word is kept and classed unknown); null or absent is none
+anthropic-messages:Message.stop_sequence policy string or null; read when present
+anthropic-messages:Message.usage read Usage; absent or null is no report
+anthropic-messages:TextBlock.text read string; required
+anthropic-messages:ToolUseBlock.id read string; required
+anthropic-messages:ToolUseBlock.name read string; required
+anthropic-messages:ToolUseBlock.input policy any JSON value that is not null, kept as the value (never printed to text or parsed further here); required
+anthropic-messages:ThinkingBlock.thinking read string; required
+anthropic-messages:ThinkingBlock.signature read string; required
+anthropic-messages:RedactedThinkingBlock.data read string; required
+anthropic-messages:ContentBlock.other policy a block whose type is not text, thinking, redacted_thinking or tool_use is kept raw, never dropped
+anthropic-messages:Usage.input_tokens read natural; excludes the cache reads and writes
+anthropic-messages:Usage.output_tokens read natural
+anthropic-messages:Usage.cache_read_input_tokens read natural; a count of its own, not a part of input_tokens
+anthropic-messages:Usage.cache_creation_input_tokens read natural; a count of its own, not a part of input_tokens
+anthropic-messages:Message.container ignored
+anthropic-messages:Message.diagnostics ignored
+anthropic-messages:Message.role ignored the constant assistant
+anthropic-messages:Message.stop_details ignored
+anthropic-messages:Message.type ignored the constant message
+anthropic-messages:TextBlock.citations ignored
+anthropic-messages:ToolUseBlock.caller ignored
+anthropic-messages:Usage.cache_creation ignored the breakdown by cache lifetime
+anthropic-messages:Usage.service_tier ignored
+anthropic-messages:Usage.server_tool_use ignored
+anthropic-messages:MessageCreateParams.model policy string, an opaque name; required
+anthropic-messages:MessageCreateParams.max_tokens read natural; required, written as a plain natural
+anthropic-messages:MessageCreateParams.messages read array of messages; required
+anthropic-messages:MessageCreateParams.system policy a string (the array of text blocks form is not modelled); left out when absent
+anthropic-messages:MessageCreateParams.tools read array of tools; an empty list is left out
+anthropic-messages:MessageCreateParams.tool_choice read auto, any, none or a named tool, each with the parallel-use flag where the schema has it
+anthropic-messages:MessageCreateParams.stream read boolean; left out when absent
+anthropic-messages:MessageCreateParams.temperature read number lexeme; left out when absent
+anthropic-messages:MessageCreateParams.top_p read number lexeme; left out when absent
+anthropic-messages:MessageCreateParams.top_k read natural; left out when absent
+anthropic-messages:MessageCreateParams.stop_sequences read array of strings; an empty list is left out
+anthropic-messages:MessageParam.role read user or assistant
+anthropic-messages:MessageParam.content policy an array of blocks (a bare string is read as one text block; image and document blocks are not modelled and are refused)
+anthropic-messages:ToolUseBlockParam.input policy the members of an object, written verbatim
+anthropic-messages:ToolResultBlockParam.tool_use_id read string; required
+anthropic-messages:ToolResultBlockParam.content policy a string (the array form is not modelled); left out when absent
+anthropic-messages:ToolResultBlockParam.is_error read boolean; left out when absent
+anthropic-messages:Tool.name read string; required
+anthropic-messages:Tool.description read string; left out when absent
+anthropic-messages:Tool.input_schema read the members of a JSON Schema object; required
+anthropic-messages:Tool.strict read boolean; left out when absent
+anthropic-messages:MessageCreateParamsBase.cache_control ignored
+anthropic-messages:MessageCreateParamsBase.metadata ignored
+anthropic-messages:MessageCreateParamsBase.output_config ignored
+anthropic-messages:MessageCreateParamsBase.service_tier ignored
+anthropic-messages-turn:answer-each-call-once policy every tool_use block is answered by one tool_result block, in call order, among the first blocks of the user message directly after the assistant message that made the call (the vendor's tool-use guide states this in prose)
+anthropic-messages-turn:window policy the user text of a turn's window (text and orphan results, shown as text) follows the results in the same message; the window ends at the next assistant item or turn
+anthropic-messages-turn:unanswered-placeholder policy a call with no recorded result is shown with the consumer's placeholder text
+anthropic-messages-turn:orphan-is-text policy a result with no turn open in front of it is shown as user text, never as a tool_result block
+anthropic-messages-turn:prefix-stable policy extending a conversation by an assistant item leaves the messages already rendered as they were; assistant messages are never joined
+anthropic-messages:RawMessageStreamEvent.type policy the data's type names the event; the stream's own event type, when named, must equal it; a type outside the eight events is refused
+anthropic-messages:RawMessageStartEvent.message read the message: its id, model and the usage known at the start; its (empty) content is not read
+anthropic-messages:RawContentBlockStartEvent.content_block read a block as the reply reads it (text, thinking, redacted_thinking, tool_use; another type is kept raw)
+anthropic-messages:RawContentBlockStartEvent.index read natural; required, keys the block
+anthropic-messages:RawContentBlockDeltaEvent.index read natural; required
+anthropic-messages:RawContentBlockDeltaEvent.delta read the delta of the block
+anthropic-messages:TextDelta.text read string; concatenated onto a text block
+anthropic-messages:InputJSONDelta.partial_json read string, a piece of the call's input as JSON text; concatenated onto a tool_use block and parsed at message_stop
+anthropic-messages:ThinkingDelta.thinking read string; concatenated onto a thinking block
+anthropic-messages:SignatureDelta.signature read string; concatenated onto a thinking block's signature
+anthropic-messages:RawContentBlockDelta.other policy a delta of another type (a citations delta) is read and kept out of the reply
+anthropic-messages:RawContentBlockStopEvent.index read natural; required, the block must have started
+anthropic-messages:RawMessageDeltaEvent.delta.stop_reason policy kept as the provider's text; the last non-null one wins
+anthropic-messages:RawMessageDeltaEvent.delta.stop_sequence policy the last non-null one wins
+anthropic-messages:MessageDeltaUsage.counts read naturals (output_tokens, input_tokens, the two cache counts); cumulative: each count is the last non-null one seen
+anthropic-messages:RawMessageStopEvent.type policy the terminal event
+anthropic-messages:ErrorEvent.error policy an error event stops the fold; its message is kept when it is a string
+anthropic-messages-stream:message-stop-is-terminal policy the fold is complete only on message_stop as the last event, after message_start
+anthropic-messages-stream:truncated-is-never-complete policy events that end with no message_stop are truncated, with the partial reply typed as partial
+anthropic-messages-stream:error-event policy an error event stops the fold with its message and the partial reply
+anthropic-messages-stream:order policy nothing but ping comes before message_start; a second message_start is refused
+anthropic-messages-stream:chunk-boundaries policy deltas of a kind concatenate in order, so where a text or a call's input is split does not matter
+anthropic-messages-stream:tool-input-from-pieces policy a call's input is the value its pieces parse to; none sent keeps the start's; pieces that do not parse refuse a complete reply and are kept as text in a partial one
+openrouter-chat:usage-frame-has-choices policy the final usage frame of a stream carries `choices` and repeats the finish reason; a usage report is read from any frame
+openrouter-chat:reasoning-text policy the model's reasoning text is a message's (or a delta's) `reasoning` member, else its `reasoning_content` alias, each a string when present; in a stream the pieces concatenate in order; `reasoning_details` is not read
+openrouter-chat:provider policy the reply's (or chunk's) top-level `provider` string names the upstream that served the call; read when present, the first one seen wins in a stream
+openrouter-chat:usage-cost read a JSON number: what the call cost, as the provider wrote it (a fraction and an exponent too, e.g. 1.68e-05); absent is no report (none), and a value that is not a number, or a number written with a minus sign, is refused, never coerced and never read as 0 (the test is the sign of the lexeme: a `-0` is zero and is refused for its sign, so the reading never claims a value is below zero). No unit, no conversion, never combined with the token counts
+openrouter-chat:usage-cost-details ignored the nested breakdown of `usage.cost` (`cost_details`): not read
+openrouter-chat:native-finish-reason ignored the provider's own finish word beside the normalized one: not read
+openrouter-chat:finish-reason-error policy the normalized finish reason `error` is a class of its own (a generation that failed after it began)
+openrouter-chat:mid-stream-error policy a chunk with a top-level `error` and finish reason `error` ends the stream with HTTP 200; the fold stops there with the message and the partial reply
+openrouter-chat:comment-lines policy comment lines (`: OPENROUTER PROCESSING`) are not events: the event splitter's
+openrouter-chat:Error.code policy a word or a plain natural (the HTTP status before the stream is committed), each read as itself, anything else refused
+openrouter-chat:Error.message read string; required
 
