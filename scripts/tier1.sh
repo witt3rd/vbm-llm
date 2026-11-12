@@ -69,7 +69,7 @@ lake build VbmSimd:static LeanJson:static   # built alone first: a module of vbm
 lake build VbmLlm VbmLlmProofs vbm-llm-vectors   # once, for the gates and every test (they build nothing more)
 
 # 2a. The axiom gate: every constant of ours depends only on propext, Classical.choice, Quot.sound (--selftest: a non-standard axiom is rejected).
-bg axiom-gate lake env lean --run scripts/AxiomGate.lean --selftest
+bg axiom-gate .land/tool/bin/land-lean axiom --selftest
 
 # 2b. The obligation ledger: named theorems exist; spec-clause tags are in the index; proved may only rise, open may only fall, coverage may only rise. Renders docs/proof-ledger.md.
 bg ledger-gate lake env lean --run scripts/LedgerGate.lean --selftest

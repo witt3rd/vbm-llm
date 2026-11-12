@@ -41,7 +41,7 @@ Slices (the order of work): scaffold, **OpenAI response decode** (with usage ari
 - **The trust ledger** (`docs/trust-ledger.md`) lists everything outside our control; a new boundary (extern, C file, workflow, pinned library, tool) is listed there before it lands.
 
 ## Gates (Tier 1 before landing; nothing runs after the push)
-- **Tier 1** (`scripts/tier1.sh`): forbidden-constructs scan, import scan, pipefail lint, the vendored lander's drift check, the pinned-library check, zero-warning build, axiom gate (`scripts/AxiomGate.lean`), named-theorem ledger check with clause tags (`scripts/LedgerGate.lean`; the counts are reported, not gated), conformance vectors (`vectors/`), public-readiness lint, and the offline self-tests of the parallel runner and the crash-record check.
+- **Tier 1** (`scripts/tier1.sh`): forbidden-constructs scan, import scan, pipefail lint, the vendored lander's drift check, the pinned-library check, zero-warning build, axiom gate (`.land/tool/bin/land-lean axiom`), named-theorem ledger check with clause tags (`scripts/LedgerGate.lean`; the counts are reported, not gated), conformance vectors (`vectors/`), public-readiness lint, and the offline self-tests of the parallel runner and the crash-record check.
 - **Nothing runs after the push.** If main is ever red, whoever sees it reverts the offending commit with `git revert` and lands the revert; the author fixes forward in a new worktree.
 - **Not ported yet** from the project these gates were first built in: the closure gate (the specified share of executed mass; every claim here names theorems about the functions that are the library, nothing else is executed), the delta test selection, the mutation and non-vacuity metrics.
 
