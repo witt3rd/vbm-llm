@@ -10,8 +10,8 @@
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/paths.sh"   # every consumer path, defined once (lib/paths.sh)
 
 land_conf_keys="LAND_BASE LAND_REMOTE LAND_GATES_CMD LAND_TEST_CMD LAND_REGEN_CMD LAND_GEN_CMD LAND_GENERATED_LIST LAND_REQUIRE_TRAILERS
- LAND_CONVENTIONAL LAND_COMMIT_TYPES LAND_PROTECTED LAND_HOOKS_DIR LAND_LOCALE LAND_FAIL_PATTERN LAND_ATTEMPTS LAND_DEADLINE LAND_TIER1_TIMEOUT
- LAND_STEP_TIMEOUT LAND_GIT_TIMEOUT"
+ LAND_CONVENTIONAL LAND_COMMIT_TYPES LAND_PROTECTED LAND_INERT LAND_HOOKS_DIR LAND_LOCALE LAND_ATTEMPTS LAND_DEADLINE LAND_TIER1_TIMEOUT
+ LAND_STEP_TIMEOUT LAND_GIT_TIMEOUT LAND_RC_CMD LAND_RC_TIMEOUT"
 
 # The keys of .land/lean.conf (docs/lean-gates.md): the same grammar and the same parser as land.conf, its own keys (one file per tool, as rustfmt.toml and clippy.toml are).
 lean_conf_keys="LAND_LEAN_AXIOM_IMPORTS LAND_LEAN_AXIOM_ROOTS LAND_LEAN_RECHECK_MODULES LAND_LEAN_LEDGER_MODULE LAND_LEAN_LEDGER_CONSTANT LAND_LEAN_LEDGER_IMPORTS LAND_LEAN_LEDGER_SUBJECT LAND_LEAN_LEDGER_ENTRIES LAND_LEAN_LEDGER_BRIDGES LAND_LEAN_LEDGER_BASELINE LAND_LEAN_LEDGER_CLAUSES LAND_LEAN_LEDGER_TAGGED LAND_LEAN_LEDGER_COVERAGE LAND_LEAN_TRUST_FILES LAND_LEAN_TRUST_EXTERN_DIRS LAND_LEAN_TRUST_TOOLS LAND_LEAN_TRUST_KEYS_CMD"
@@ -34,10 +34,11 @@ conf_defaults() {
   LAND_CONVENTIONAL=1                           # require `type(scope): summary` (or git's own `Revert "..."`)
   LAND_COMMIT_TYPES="feat fix docs chore refactor test perf build ci style revert"
   LAND_PROTECTED=                               # shell patterns (* matches /): the gate-defining set
+  LAND_INERT=                                   # shell patterns (* matches /): paths NO Tier 1 command, hook or reviewer reads; a change touching only these skips Tier 1 (README, "Inert paths")
   LAND_HOOKS_DIR=$LAND_HOOKS_DEFAULT            # repository-owned hooks (README, "Hooks")
   LAND_LOCALE=C                                 # pinned for collation, glob and sort order
   LAND_TIER1_TIMEOUT=1800; LAND_STEP_TIMEOUT=600; LAND_GIT_TIMEOUT=180   # seconds
-  LAND_FAIL_PATTERN='^(FAIL|FAILED)([ :]|$)'      # an extended regular expression: the lines of Tier 1's output that name a failure. A landing may pass a Tier 1 that fails ONLY with failures the bare base already has (inherited red)
+  LAND_RC_CMD=; LAND_RC_TIMEOUT=7200            # the release candidate's full suite, run by land-release on the exact HEAD before any tag (README, "The release candidate"); seconds
   LAND_ATTEMPTS=30; LAND_DEADLINE=900           # a landing re-validates when the base moves under it: at most this many attempts, none started after this many seconds (then exit 16)
 }
 
@@ -62,7 +63,7 @@ conf_validate() {
   local bad= k; b() { [ -n "$bad" ] || bad=$1; }
   [[ "$LAND_BASE" =~ ^[A-Za-z0-9._/-]+$ ]] || b "LAND_BASE is not a branch name ('$LAND_BASE')"
   [[ "$LAND_REMOTE" =~ ^[A-Za-z0-9._/-]+$ ]] || b "LAND_REMOTE is not a remote name ('$LAND_REMOTE')"
-  for k in LAND_ATTEMPTS LAND_DEADLINE LAND_TIER1_TIMEOUT LAND_STEP_TIMEOUT LAND_GIT_TIMEOUT; do
+  for k in LAND_ATTEMPTS LAND_DEADLINE LAND_TIER1_TIMEOUT LAND_STEP_TIMEOUT LAND_GIT_TIMEOUT LAND_RC_TIMEOUT; do
     [[ "${!k}" =~ ^[0-9]+$ ]] || b "$k must be a whole number (is '${!k}')"
   done
   [ "$LAND_ATTEMPTS" -ge 1 ] 2>/dev/null || b "LAND_ATTEMPTS must be at least 1 (is '$LAND_ATTEMPTS')"
